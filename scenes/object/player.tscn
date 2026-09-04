@@ -11,6 +11,7 @@
 [ext_resource type="Texture2D" uid="uid://bygt6rjbdhhxo" path="res://assets/character/character-run-1.png" id="8_ru0if"]
 [ext_resource type="Texture2D" uid="uid://bwumn8ggd6p5o" path="res://assets/character/character-run-2.png" id="9_fbjvd"]
 [ext_resource type="Texture2D" uid="uid://rkmc87e7fhok" path="res://assets/character/character-run-3.png" id="10_2p6sf"]
+[ext_resource type="PackedScene" uid="uid://cfgr7pn76ju2l" path="res://scenes/object/heart.tscn" id="12_vyvc0"]
 
 [sub_resource type="SpriteFrames" id="SpriteFrames_rh3mc"]
 animations = [{
@@ -69,11 +70,13 @@ animations = [{
 radius = 5.0
 height = 18.0
 
-[node name="Character" type="CharacterBody2D" unique_id=1265023306]
+[node name="Player" type="CharacterBody2D" unique_id=1265023306]
 collision_mask = 2
 script = ExtResource("1_drkdy")
 HorizontalSpeed = 300.0
 VerticalSpeed = 300.0
+BleedRate = 10.0
+Hp = 100.0
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=659651073]
 sprite_frames = SubResource("SpriteFrames_rh3mc")
@@ -83,3 +86,7 @@ autoplay = "idle"
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1989550958]
 position = Vector2(-1, 7)
 shape = SubResource("CapsuleShape2D_dbpgs")
+
+[node name="Heart" parent="." unique_id=1962682440 instance=ExtResource("12_vyvc0")]
+position = Vector2(-1, 7)
+scale = Vector2(0.25, 0.25)

@@ -1,8 +1,9 @@
 [gd_scene format=4 uid="uid://bwq50nyrdvx16"]
 
 [ext_resource type="Texture2D" uid="uid://glx00ioripbd" path="res://assets/tiles/floor2.png" id="1_gkehd"]
-[ext_resource type="PackedScene" uid="uid://dkknuobloxosp" path="res://scenes/object/character.tscn" id="1_u6h4l"]
-[ext_resource type="PackedScene" uid="uid://8at7nnuofr2t" path="res://scenes/object/book1.tscn" id="3_8yg73"]
+[ext_resource type="PackedScene" uid="uid://dkknuobloxosp" path="res://scenes/object/player.tscn" id="1_u6h4l"]
+[ext_resource type="PackedScene" uid="uid://bhkjncywsscec" path="res://scenes/theme/game_manager.tscn" id="4_le1if"]
+[ext_resource type="Script" uid="uid://b5rvnye0eyxnl" path="res://script/GameManager.cs" id="5_5w6qu"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_gkehd"]
 texture = ExtResource("1_gkehd")
@@ -21,14 +22,20 @@ scale = Vector2(60, 60)
 tile_map_data = PackedByteArray("AAD9/wAAAAAAAAAAAAD9/wEAAAAAAAAAAAD9/wIAAAAAAAAAAAD+/wAAAAAAAAAAAAD+/wEAAAAAAAAAAAD+/wIAAAAAAAAAAAD//wAAAAAAAAAAAAD//wEAAAAAAAAAAAD//wIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAIAAAAAAAAAAAABAAAAAAAAAAAAAAABAAEAAAAAAAAAAAABAAIAAAAAAAAAAAACAAAAAAAAAAAAAAACAAEAAAAAAAAAAAACAAIAAAAAAAAAAAD9/wMAAAAAAAAAAAD+/wMAAAAAAAAAAAD//wMAAAAAAAAAAAAAAAMAAAAAAAAAAAABAAMAAAAAAAAAAAACAAMAAAAAAAAAAAD7/wAAAAAAAAAAAAD7/wEAAAAAAAAAAAD7/wIAAAAAAAAAAAD7/wMAAAAAAAAAAAD7/wQAAAAAAAAAAAD7/wUAAAAAAAAAAAD8/wAAAAAAAAAAAAD8/wEAAAAAAAAAAAD8/wIAAAAAAAAAAAD8/wMAAAAAAAAAAAD8/wQAAAAAAAAAAAD8/wUAAAAAAAAAAAD9/wQAAAAAAAAAAAD9/wUAAAAAAAAAAAD+/wQAAAAAAAAAAAD+/wUAAAAAAAAAAAD//wQAAAAAAAAAAAD//wUAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAUAAAAAAAAAAAABAAQAAAAAAAAAAAABAAUAAAAAAAAAAAACAAQAAAAAAAAAAAACAAUAAAAAAAAAAAADAAAAAAAAAAAAAAADAAIAAAAAAAAAAAADAAMAAAAAAAAAAAADAAQAAAAAAAAAAAADAAUAAAAAAAAAAAAEAAAAAAAAAAAAAAAEAAEAAAAAAAAAAAAEAAIAAAAAAAAAAAAEAAMAAAAAAAAAAAAEAAQAAAAAAAAAAAAEAAUAAAAAAAAAAAADAAEAAAAAAAAAAAA=")
 tile_set = SubResource("TileSet_le1if")
 
-[node name="Character" parent="." unique_id=1265023306 instance=ExtResource("1_u6h4l")]
+[node name="Player" parent="." unique_id=1265023306 instance=ExtResource("1_u6h4l")]
 position = Vector2(70, 31)
 scale = Vector2(4, 4)
 
-[node name="Camera" type="Camera2D" parent="Character" unique_id=161997939]
+[node name="Camera" type="Camera2D" parent="Player" unique_id=161997939]
 position = Vector2(-17.5, -7.75)
 scale = Vector2(0.25, 0.25)
 
-[node name="Book2" parent="." unique_id=1408297476 instance=ExtResource("3_8yg73")]
-position = Vector2(0.99999976, 2.000002)
-scale = Vector2(0.05, 0.05)
+[node name="HpText" type="TextEdit" parent="." unique_id=940649110]
+offset_left = 461.0
+offset_top = -325.0
+offset_right = 1009.0
+offset_bottom = -143.0
+text = "Hp = "
+
+[node name="GameManager" parent="." unique_id=1822463583 instance=ExtResource("4_le1if")]
+script = ExtResource("5_5w6qu")
