@@ -5,6 +5,9 @@
 [ext_resource type="PackedScene" uid="uid://bhkjncywsscec" path="res://scenes/game_manager.tscn" id="3_r0gdh"]
 [ext_resource type="Script" uid="uid://b5rvnye0eyxnl" path="res://script/GameManager.cs" id="4_bxitf"]
 [ext_resource type="Texture2D" uid="uid://cmki54a57bo84" path="res://assets/school/_g_terrain/A_clean_3_by_3_grid_spriteshee_2026-09-04T18-10-40.png" id="5_3kbb2"]
+[ext_resource type="PackedScene" uid="uid://bkpoy28kmm3la" path="res://scenes/worries/doubt.tscn" id="6_r0gdh"]
+[ext_resource type="PackedScene" uid="uid://bikaafm5w4iwi" path="res://scenes/worries/loneliness.tscn" id="7_imp15"]
+[ext_resource type="PackedScene" uid="uid://d4eiuqbs305ft" path="res://scenes/worries/pressure.tscn" id="8_lcn1m"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_gkehd"]
 texture = ExtResource("1_uvrxo")
@@ -3108,7 +3111,7 @@ scale = Vector2(60, 60)
 tile_set = SubResource("TileSet_le1if")
 
 [node name="Player" parent="." unique_id=1265023306 instance=ExtResource("2_3kbb2")]
-position = Vector2(70, 31)
+position = Vector2(-193, -115)
 scale = Vector2(4, 4)
 
 [node name="Camera" type="Camera2D" parent="Player" unique_id=161997939]
@@ -3127,3 +3130,15 @@ script = ExtResource("4_bxitf")
 
 [node name="TileMapLayer2" type="TileMapLayer" parent="." unique_id=29083954]
 tile_set = SubResource("TileSet_rh3mc")
+
+[node name="Doubt" parent="." unique_id=1731095924 instance=ExtResource("6_r0gdh")]
+position = Vector2(88, -161)
+scale = Vector2(0.3, 0.3)
+
+[node name="Loneliness" parent="." unique_id=810447205 instance=ExtResource("7_imp15")]
+position = Vector2(-464, -284)
+scale = Vector2(0.4, 0.4)
+
+[node name="Pressure" parent="." unique_id=1528972601 instance=ExtResource("8_lcn1m")]
+position = Vector2(-642, 12)
+scale = Vector2(0.2, 0.2)

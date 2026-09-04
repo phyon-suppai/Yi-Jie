@@ -12,6 +12,9 @@
 [ext_resource type="Texture2D" uid="uid://bwumn8ggd6p5o" path="res://assets/character/character-run-2.png" id="9_fbjvd"]
 [ext_resource type="Texture2D" uid="uid://rkmc87e7fhok" path="res://assets/character/character-run-3.png" id="10_2p6sf"]
 [ext_resource type="PackedScene" uid="uid://cfgr7pn76ju2l" path="res://scenes/object/heart.tscn" id="12_vyvc0"]
+[ext_resource type="PackedScene" uid="uid://c72odrltx7axb" path="res://scenes/weapons/act.tscn" id="20_act"]
+[ext_resource type="PackedScene" uid="uid://lm5e351c7d2w" path="res://scenes/weapons/express.tscn" id="21_exp"]
+[ext_resource type="PackedScene" uid="uid://71ngwb758v0y" path="res://scenes/weapons/accept.tscn" id="22_acc"]
 
 [sub_resource type="SpriteFrames" id="SpriteFrames_rh3mc"]
 animations = [{
@@ -77,6 +80,9 @@ HorizontalSpeed = 300.0
 VerticalSpeed = 300.0
 BleedRate = 10.0
 Hp = 100.0
+ActWeaponScene = ExtResource("20_act")
+ExpressWeaponScene = ExtResource("21_exp")
+AcceptWeaponScene = ExtResource("22_acc")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=659651073]
 sprite_frames = SubResource("SpriteFrames_rh3mc")

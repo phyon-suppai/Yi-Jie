@@ -1,11 +1,13 @@
 [gd_scene format=3 uid="uid://bikaafm5w4iwi"]
 
 [ext_resource type="Texture2D" uid="uid://b3f5ltqtldfj1" path="res://assets/worries/loneliness.png" id="1_01yf0"]
+[ext_resource type="Script" uid="uid://cl44pusl1c34g" path="res://script/worries/Loneliness.cs" id="1_w1yws"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_rh3mc"]
 radius = 258.04843
 
 [node name="Loneliness" type="Area2D" unique_id=810447205]
+script = ExtResource("1_w1yws")
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=726924875]
 texture = ExtResource("1_01yf0")
