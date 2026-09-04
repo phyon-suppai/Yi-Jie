@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://bkpoy28kmm3la"]
+
+[ext_resource type="Texture2D" uid="uid://c07xpgid2et42" path="res://assets/worries/doubt.png" id="1_pg4uv"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_rh3mc"]
+radius = 274.52686
+
+[node name="Suspect" type="Area2D" unique_id=1731095924]
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=676242907]
+texture = ExtResource("1_pg4uv")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=348072735]
+shape = SubResource("CircleShape2D_rh3mc")

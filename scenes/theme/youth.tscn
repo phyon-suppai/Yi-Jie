@@ -1,0 +1,40 @@
+[gd_scene format=3 uid="uid://bwq50nyrdvx16"]
+
+[ext_resource type="Texture2D" uid="uid://glx00ioripbd" path="res://assets/tiles/floor2.png" id="1_uvrxo"]
+[ext_resource type="PackedScene" uid="uid://dkknuobloxosp" path="res://scenes/object/player.tscn" id="2_3kbb2"]
+[ext_resource type="PackedScene" uid="uid://bhkjncywsscec" path="res://scenes/game_manager.tscn" id="3_r0gdh"]
+[ext_resource type="Script" uid="uid://b5rvnye0eyxnl" path="res://script/GameManager.cs" id="4_bxitf"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_gkehd"]
+texture = ExtResource("1_uvrxo")
+texture_region_size = Vector2i(2, 2)
+0:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_le1if"]
+tile_size = Vector2i(2, 2)
+sources/0 = SubResource("TileSetAtlasSource_gkehd")
+
+[node name="School" type="Node2D" unique_id=515661041]
+
+[node name="TileMapLayer" type="TileMapLayer" parent="." unique_id=645179005]
+position = Vector2(6, -335)
+scale = Vector2(60, 60)
+tile_set = SubResource("TileSet_le1if")
+
+[node name="Player" parent="." unique_id=1265023306 instance=ExtResource("2_3kbb2")]
+position = Vector2(70, 31)
+scale = Vector2(4, 4)
+
+[node name="Camera" type="Camera2D" parent="Player" unique_id=161997939]
+position = Vector2(-17.5, -7.75)
+scale = Vector2(0.25, 0.25)
+
+[node name="HpText" type="TextEdit" parent="." unique_id=940649110]
+offset_left = 461.0
+offset_top = -325.0
+offset_right = 580.0
+offset_bottom = -63.0
+text = "Hp = "
+
+[node name="GameManager" parent="." unique_id=1822463583 instance=ExtResource("3_r0gdh")]
+script = ExtResource("4_bxitf")
