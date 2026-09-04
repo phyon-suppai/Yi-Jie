@@ -1,5 +1,6 @@
 [gd_scene format=3 uid="uid://dkknuobloxosp"]
 
+[ext_resource type="Script" uid="uid://cvrwk72es6b25" path="res://script/Character.cs" id="1_drkdy"]
 [ext_resource type="Texture2D" uid="uid://dmmmwrgbvfb5u" path="res://assets/character/character-fall-0.png" id="1_wjbo1"]
 [ext_resource type="Texture2D" uid="uid://dnsw68ex2uoag" path="res://assets/character/character-idle-0.png" id="2_drkdy"]
 [ext_resource type="Texture2D" uid="uid://docn1g5fxreps" path="res://assets/character/character-idle-1.png" id="3_vyvc0"]
@@ -69,10 +70,14 @@ radius = 5.0
 height = 18.0
 
 [node name="Character" type="CharacterBody2D" unique_id=1265023306]
+script = ExtResource("1_drkdy")
+HorizontalSpeed = 300.0
+VerticalSpeed = 300.0
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=659651073]
 sprite_frames = SubResource("SpriteFrames_rh3mc")
-animation = &"fall"
+animation = &"idle"
+autoplay = "idle"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1989550958]
 position = Vector2(-1, 7)
