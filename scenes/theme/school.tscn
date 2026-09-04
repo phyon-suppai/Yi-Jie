@@ -6,6 +6,6 @@
 
 [node name="Character" parent="." unique_id=1265023306 instance=ExtResource("1_u6h4l")]
 position = Vector2(70, 31)
+scale = Vector2(4, 4)
 
 [node name="Camera" type="Camera2D" parent="." unique_id=161997939]
-zoom = Vector2(4, 4)

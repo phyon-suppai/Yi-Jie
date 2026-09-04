@@ -1,0 +1,9 @@
+[gd_scene format=3 uid="uid://genovdku8ees"]
+
+[node name="Trigger" type="Node2D" unique_id=1779802669]
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1002253790]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1842881004]
+light_mask = 0
+visibility_layer = 2
