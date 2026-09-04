@@ -8,8 +8,9 @@ public partial class Doubt : Area2D
 	/// <summary>初始生命值（可调）</summary>
 	[Export] public float InitialHp { get; set; } = 10f;
 
-	/// <summary>生命值随时间增长的速度（HP/秒，无上限）</summary>
-	[Export] public float HpGrowPerSec { get; set; } = 2f;
+	/// <summary>HP 增长系数（可调）：每秒增长 = |RotationSpeed| × HpGrowFactor，转得越快涨得越快</summary>
+	[Export(PropertyHint.Range, "0,0.5,0.001")]
+	public float HpGrowFactor { get; set; } = 0.03f;
 
 	[ExportGroup("旋转")]
 	/// <summary>旋转动画速度（度/秒，负值反向）</summary>
@@ -21,7 +22,7 @@ public partial class Doubt : Area2D
 	[Export(PropertyHint.Range, "0,5,0.01")]
 	public float ScalePerLn { get; set; } = 0.15f;
 
-	/// <summary>当前生命值。随 HpGrowPerSec 每帧上涨，无上限。</summary>
+	/// <summary>当前生命值。随 |RotationSpeed| × HpGrowFactor 每帧上涨，无上限。</summary>
 	public float Hp { get; private set; }
 
 	private Sprite2D _sprite;
@@ -39,8 +40,8 @@ public partial class Doubt : Area2D
 	{
 		float d = (float)delta;
 
-		// 生命值随时间的无上限增长
-		Hp += HpGrowPerSec * d;
+		// 生命值无上限增长，速率 = |旋转速度| × HpGrowFactor
+		Hp += Mathf.Abs(RotationSpeed) * HpGrowFactor * d;
 		RotationDegrees += RotationSpeed * d; // 旋转动画
 		ApplyScale();
 	}
