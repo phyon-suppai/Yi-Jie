@@ -1,19 +1,20 @@
-[gd_scene format=3 uid="uid://d4eiuqbs305ft"]
+[gd_scene load_steps=3 format=3 uid="uid://d4eiuqbs305ft"]
 
-[ext_resource type="Script" uid="uid://c7reihc8tw26s" path="res://script/worries/Pressure.cs" id="1_looyk"]
-[ext_resource type="Texture2D" uid="uid://bd7frpjmpyk47" path="res://assets/worries/pressure.png" id="1_lpsfe"]
+[ext_resource type="Script" uid="uid://c7reihc8tw26s" path="res://script/worries/Pressure.cs" id="1_pressure"]
 
-[sub_resource type="CircleShape2D" id="CircleShape2D_rh3mc"]
-radius = 262.1221
+[sub_resource type="CircleShape2D" id="CircleShape2D_body"]
+radius = 34.0
 
-[node name="Pressure" type="Area2D" unique_id=1528972601]
-script = ExtResource("1_looyk")
-InitialHp = 15.0
-RotationSpeed = 45.0
-MaxSpeedFactor = 4.0
+[node name="Pressure" type="Area2D"]
+collision_layer = 2
+collision_mask = 0
+script = ExtResource("1_pressure")
+InitialHp = 16.0
+MaxHp = 70.0
+RotationSpeed = 0.0
+BodyRadius = 34.0
+MaxSpeed = 55.0
+Accel = 170.0
 
-[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1602027627]
-texture = ExtResource("1_lpsfe")
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1716967715]
-shape = SubResource("CircleShape2D_rh3mc")
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_body")

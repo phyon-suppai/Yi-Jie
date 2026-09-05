@@ -1,187 +1,267 @@
 using Godot;
 
 /// <summary>
-/// 烦恼基类：体型成长、旋转动画、追击玩家的运动。
-/// 三种烦恼（疑 / 压 / 孤）只有数据差异（初始血量、旋转速度、贴图、缩放），
-/// 行为骨架全部在此，具体数值由各自场景（doubt / pressure / loneliness.tscn）覆盖。
+/// 烦恼基类(Area2D,根节点自绘「外亮内暗」色块,零贴图)。
+/// - 保留血条:HP 随时间自然成长,体型随 HP 增大 → 时间压力;
+///   裁决方(GameManager)用正确武器放大伤害(≈快速解决),错误武器伤害为 0。
+/// - 外观:由 Kind 决定身份色(Palette),攻击与旋转在 _Draw 中实时反映,无 Sprite2D。
+/// - 移动 AI:子类覆写 Move(),疑原地打转不追人 / 焦缓慢逼近 / 孤保持距离并伺机贴近。
 /// </summary>
-public partial class Worry : Area2D
+public abstract partial class Worry : Area2D
 {
-	[ExportGroup("成长")]
-	// 初始生命值（可调）
-	[Export] public float InitialHp { get; set; } = 10f;
+	public abstract WorryType Kind { get; }
 
-	// HP 增长系数（可调）：每秒增长 = |RotationSpeed| × HpGrowFactor，转得越快涨得越快
-	[Export(PropertyHint.Range, "0,0.5,0.001")]
-	public float HpGrowFactor { get; set; } = 0.03f;
+	[ExportGroup("血条(时间压力)")]
+	[Export(PropertyHint.Range, "1,60,1")] public float InitialHp { get; set; } = 12f;
+	[Export(PropertyHint.Range, "12,120,1")] public float MaxHp { get; set; } = ReactionTable.MaxWorryHp;
+	// 每秒自然成长的 HP;最终 HP 越高体型越大 → 留给玩家的时间越短
+	[Export(PropertyHint.Range, "0,10,0.1")] public float HpGrowRate { get; set; } = ReactionTable.WorryHpGrowPerSec;
+	[Export(PropertyHint.Range, "0,2,0.05")] public float ScalePerLn { get; set; } = ReactionTable.WorryScalePerLn;
+	[Export(PropertyHint.Range, "0.5,6,0.1")] public float BodyGrowSpeed { get; set; } = 2f; // 体型趋近速度
 
-	// 血量上限：涨到这里就不再长。没有上限的话，拖久了烦恼会硬到打不动（这是手感崩掉的根源）
-	[Export(PropertyHint.Range, "1,500,1")]
-	public float MaxHp { get; set; } = 40f;
+	[ExportGroup("外观")]
+	[Export(PropertyHint.Range, "0,180,1")] public float RotationSpeed { get; set; } = 30f; // 自转(度/秒,0=不转)
+	[Export(PropertyHint.Range, "16,60,1")] public float BodyRadius { get; set; } = 30f;   // 基准半宽(世界单位)
+	[Export] public bool Ghostly { get; set; } = false; // 孤:幽灵半透明
 
-	[ExportGroup("旋转")]
-	// 旋转动画速度（度/秒，负值反向）
-	[Export(PropertyHint.Range, "-360,360,1")]
-	public float RotationSpeed { get; set; } = 90f;
-
-	[ExportGroup("体型")]
-	// 血量高于初始时的放大幅度：倍率 = 1 + ScalePerLn × ln(Hp / InitialHp)
-	[Export(PropertyHint.Range, "0,5,0.01")]
-	public float ScalePerLn { get; set; } = 0.15f;
-
-	// 半径变化速度（每秒变化的体型倍率）。受伤后半径不是瞬变，而是按此速度平滑趋近目标。
-	// 参考：3 表示约 0.3 秒完成从 1.8 倍缩到 0.9 倍
-	[Export(PropertyHint.Range, "0.1,20,0.1")]
-	public float RadiusChangeSpeed { get; set; } = 3f;
-
-	[ExportGroup("追击")]
-	// 最大速度比例系数：最大速度 = MaxSpeedFactor × √半径
-	// 参考：半径 ≈80 时，18 → 约 160 px/s（玩家移动速度为 300，追得上但甩得掉）
-	[Export(PropertyHint.Range, "0,100,0.5")]
-	public float MaxSpeedFactor { get; set; } = 18f;
-
-	// 加速度比例系数：加速度 = AccelFactor / 半径²
-	// 参考：半径 ≈80 时，1500000 → 约 230 px/s²
-	// 半径越大越笨重：最终速度更高（√r），但提速更慢（1/r²）
-	[Export(PropertyHint.Range, "0,10000000,1000")]
-	public float AccelFactor { get; set; } = 1500000f;
+	[ExportGroup("移动")]
+	[Export(PropertyHint.Range, "0,240,1")] public float MaxSpeed { get; set; } = 80f;
+	[Export(PropertyHint.Range, "0,800,10")] public float Accel { get; set; } = 240f;
 
 	[ExportGroup("受击")]
-	// 受击闪光时长（秒）：命中但没打死时闪一下，让玩家知道打中了
-	[Export(PropertyHint.Range, "0,0.5,0.01")]
-	public float FlashTime { get; set; } = 0.12f;
+	[Export(PropertyHint.Range, "0,0.5,0.01")] public float FlashTime { get; set; } = 0.15f;
 
-	// 受击闪光颜色（由白渐变回此色再恢复）
-	[Export] public Color FlashColor { get; set; } = new Color(1f, 0.55f, 0.55f);
-
-	// 当前生命值。随 |旋转速度| × HpGrowFactor 每帧上涨；被子弹命中则扣减
+	// ---- 运行时 ----
 	public float Hp { get; private set; }
+	public float Radius { get; private set; }           // 当前碰撞/视觉半径(世界单位)
+	public bool IsDying { get; private set; }
 
-	// 当前体型半径（世界单位）= 碰撞半径 × 节点缩放 × 成长系数
-	public float Radius { get; private set; }
-
-	private Sprite2D _sprite;
 	private CollisionShape2D _shape;
-	private CircleShape2D _circle;   // 实例独占的碰撞圆，半径随体型同步变化
-	private float _baseRadius = 40f; // 场景里配置的原始碰撞半径
-	private float _growth = 1f;      // 当前体型倍率（平滑趋近目标倍率）
-	private Node2D _target;
+	private CircleShape2D _circle;  // 实例独占,半径随体型变
+	private float _growth = 1f;     // 当前体型倍率(平滑趋近目标)
+	private float _flash;           // 命中闪白剩余时间
+	private float _dieT;            // 消散动画计时
+	private float _wrongT;          // 误伤反馈动画剩余时间
+	private const float DieDuration = 0.3f;     // 消散动画总时长(秒)
+	private const float DieShrinkSpeed = 6f;    // 体型收缩速度(每秒倍率)
+	private const float WrongHitFlash = 0.25f;   // 误伤反馈动画时长(秒)
+	private static readonly Color WrongMarkColor = new Color(1f, 0.42f, 0.22f); // 误伤警告橙红色
+	private Font _font;             // 方块内中文标识
 	private Vector2 _velocity;
-	private float _flash;
+	private Node2D _target;
 
 	public override void _Ready()
 	{
-		// 加入 worry 组：武器的命中上报依赖此组识别烦恼
 		AddToGroup("worry");
-		_sprite = GetNodeOrNull<Sprite2D>("Sprite2D");
-		_shape = GetNodeOrNull<CollisionShape2D>("CollisionShape2D");
-
-		// 场景里的形状是共享资源，必须先复制一份，否则改半径会影响同类型的所有实例
-		if (_shape?.Shape is CircleShape2D src)
+		_shape = GetNode<CollisionShape2D>("CollisionShape2D");
+		if (_shape.Shape is CircleShape2D src)
 		{
-			_baseRadius = src.Radius;
 			_circle = (CircleShape2D)src.Duplicate();
+			_shape.Shape = _circle;
+			_circle.Radius = BodyRadius;
+		}
+		else
+		{
+			_circle = new CircleShape2D { Radius = BodyRadius };
 			_shape.Shape = _circle;
 		}
 
+		_font = new SystemFont
+		{
+			FontNames = new[] { "Noto Sans CJK SC", "Microsoft YaHei", "SimHei", "PingFang SC", "Source Han Sans SC" }
+		};
+
 		Hp = InitialHp;
-		ApplyScale(0f); // d=0：出生即等于目标体型，不需要过渡
+		ApplyBody(0f); // 出生直接对齐目标体型
+		QueueRedraw();
 	}
 
 	public override void _PhysicsProcess(double delta)
 	{
 		float d = (float)delta;
 
-		// 生命值持续上涨（封顶于 MaxHp），速率 = |旋转速度| × HpGrowFactor
-		float hpCap = Mathf.Max(MaxHp, InitialHp); // 上限不低于初始血量，避免一出生就被削
-		Hp = Mathf.Min(Hp + Mathf.Abs(RotationSpeed) * HpGrowFactor * d, hpCap);
-		RotationDegrees += RotationSpeed * d; // 旋转动画
-		ApplyScale(d);
-		UpdateFlash(d);
+		if (IsDying)
+		{
+			// 消散动画:闪白后收缩淡出,节点延后释放(便于看到击杀反馈)
+			_dieT += d;
+			_growth = Mathf.Max(_growth - DieShrinkSpeed * d, 0f);
+			RotationDegrees += RotationSpeed * d;
+			_flash = Mathf.Max(_flash - d, 0f);
+			if (_dieT >= DieDuration || _growth <= 0.02f)
+				QueueFree();
+			else
+				QueueRedraw();
+			return;
+		}
 
-		Chase(d);
+		Hp = Mathf.Min(Hp + HpGrowRate * d, Mathf.Max(MaxHp, InitialHp)); // HP 持续上涨
+		ApplyBody(d);                                                     // 体型平滑跟随 HP
+		RotationDegrees += RotationSpeed * d;
+		_flash = Mathf.Max(_flash - d, 0f);
+		_wrongT = Mathf.Max(_wrongT - d, 0f);
+		Move(d);
+		QueueRedraw(); // 自转会不断变化 → 每帧轻量重绘(矩形极廉价)
 	}
 
 	/// <summary>
-	/// 扣除生命值。返回 true 表示血量归零、已消散（成就由裁决方结算）。
-	/// 只有裁决方（GameManager）应调用它。
+	/// 扣除生命值。返回 true = 归零消散(进入消散动画,节点延后释放;结算由裁决方 GameManager 负责)。
+	/// 只有裁决方调用它;错误武器伤害恒为 0,不会走到这里。
 	/// </summary>
 	public bool TakeDamage(float damage)
 	{
-		if (damage <= 0f)
-			return false;
+		if (IsDying) return false;
+		if (damage <= 0f) return false;
 
 		Hp -= damage;
 		if (Hp > 0f)
 		{
-			_flash = FlashTime; // 未致死：闪一下，让玩家知道打中了
+			_flash = FlashTime;
 			return false;
 		}
-
-		QueueFree(); // 血量归零：消散
+		BeginDeath();
 		return true;
 	}
 
-	/// <summary>受击闪光随时间衰减回原色；无闪光时不动，避免每帧写属性。</summary>
-	private void UpdateFlash(float d)
+	/// <summary>进入消散动画(裁决方确认击杀后调用);节点延后释放。</summary>
+	public void BeginDeath()
 	{
-		if (_sprite == null || _flash <= 0f)
-			return;
-
-		_flash = Mathf.Max(_flash - d, 0f);
-		float t = FlashTime > 0f ? _flash / FlashTime : 0f;
-		_sprite.Modulate = _flash > 0f ? Colors.White.Lerp(FlashColor, t) : Colors.White;
+		if (IsDying) return;
+		IsDying = true;
+		_dieT = 0f;
+		_flash = FlashTime;
 	}
 
-	/// <summary>朝玩家加速追击：速度上限 ∝ √半径，加速度 ∝ 1/半径²。</summary>
-	private void Chase(float d)
+	/// <summary>被非克制武器命中时的反馈(不扣血,但触发视觉警告与精力惩罚)。</summary>
+	public void OnWrongHit()
 	{
-		if (_target == null || !GodotObject.IsInstanceValid(_target))
-			_target = GetTree().GetFirstNodeInGroup("player") as Node2D;
-		if (_target == null)
-			return;
+		if (IsDying) return;
+		_wrongT = WrongHitFlash;
+		QueueRedraw();
+	}
 
-		Vector2 to = _target.GlobalPosition - GlobalPosition;
-		float dist = to.Length();
-		if (dist <= 0.001f)
-			return;
+	/// <summary>分裂体复制继承:继承母体的当前 HP 与体型(不重置时间压力)。</summary>
+	public void AdoptSplitState(float hpLeft)
+	{
+		Hp = Mathf.Clamp(hpLeft, 1f, Mathf.Max(MaxHp, InitialHp));
+		ApplyBody(0f);
+	}
 
-		// 半径兜底，避免除零 / 开方得到病态值
-		float r = Mathf.Max(Radius, 1f);
-		float maxSpeed = MaxSpeedFactor * Mathf.Sqrt(r);
-		float accel = AccelFactor / (r * r);
+	/// <summary>烦恼方块中央显示的单字。</summary>
+	private string KindLabel => Kind switch
+	{
+		WorryType.Doubt => "疑",
+		WorryType.Pressure => "焦",
+		WorryType.Loneliness => "孤",
+		_ => ""
+	};
 
-		_velocity = _velocity.MoveToward(to / dist * maxSpeed, accel * d);
-		GlobalPosition += _velocity * d;
+	public override void _Draw()
+	{
+		(Color frame, Color core) = Palette.ForWorry(Kind);
+		float alpha = 1f;
+		if (Ghostly) // 孤:幽灵质感——半透暗芯 + 半透亮框
+		{
+			core.A = 0.38f;
+			frame.A = 0.72f;
+		}
+		if (_flash > 0f) // 命中闪白:亮框往白推,暗芯往亮推
+		{
+			frame = frame.Lerp(Colors.White, 0.6f);
+			core = core.Lerp(Palette.DissolveFlash, 0.35f);
+		}
+		if (IsDying) // 消散时整体淡出
+		{
+			alpha = 1f - Mathf.Clamp(_dieT / DieDuration, 0f, 1f);
+			frame.A *= alpha;
+			core.A *= alpha;
+		}
+		if (_wrongT > 0f) // 误伤反馈:边框闪警告橙红色,并画白色 "×"
+		{
+			float a = _wrongT / WrongHitFlash;
+			frame = frame.Lerp(WrongMarkColor, 0.6f * a);
+			core = core.Lerp(WrongMarkColor.Darkened(0.3f), 0.45f * a);
+		}
+
+		float half = BodyRadius * _growth;
+		// 亮框满铺
+		DrawRect(new Rect2(-half, -half, half * 2f, half * 2f), frame);
+		// 暗芯收缩(亮框视觉厚度随体型比例走)
+		float inset = Mathf.Max(half * 0.18f, 3f);
+		float inner = half - inset;
+		if (inner > 0f)
+			DrawRect(new Rect2(-inner, -inner, inner * 2f, inner * 2f), core);
+
+		// 身份字(居中)
+		string label = KindLabel;
+		if (!string.IsNullOrEmpty(label) && inner > 5f && _font != null)
+		{
+			int fontSize = Mathf.RoundToInt(Mathf.Clamp(inner * 1.3f, 8f, 28f));
+			Vector2 ts = _font.GetStringSize(label, fontSize: fontSize);
+			Color textColor = Colors.White;
+			textColor.A = alpha;
+			DrawString(_font, new Vector2(-ts.X * 0.5f, ts.Y * 0.35f), label,
+				HorizontalAlignment.Left, -1, fontSize, textColor);
+		}
+
+		// 误伤 "×" 标记(居中,随反馈时间淡出)
+		if (_wrongT > 0f && inner > 3f)
+		{
+			float a = _wrongT / WrongHitFlash;
+			Color mark = Colors.White;
+			mark.A = 0.85f * a * alpha;
+			float s = inner * 0.55f;
+			float w = Mathf.Max(inner * 0.12f, 2f);
+			DrawLine(new Vector2(-s, -s), new Vector2(s, s), mark, w, true);
+			DrawLine(new Vector2(s, -s), new Vector2(-s, s), mark, w, true);
+		}
 	}
 
 	/// <summary>
-	/// 同步体型：先按血量算出目标倍率，再以 RadiusChangeSpeed 平滑趋近。
-	///   Hp ≥ 初始：目标 = 1 + ScalePerLn × ln(Hp / 初始)  血量越高按对数放大
-	///   Hp < 初始：目标 = Hp / 初始                      血量越低线性缩小，Hp=0 时倍率恰为 0
-	/// 受伤骤降的是血量，体型跟随有一个可调速度的过程 → 「被打就缓缓缩一圈」的反馈。
+	/// 移动 AI(子类覆写)。默认向玩家匀速加速逼近(焦的表现由较低 MaxSpeed 体现)。
 	/// </summary>
-	private void ApplyScale(float d)
+	protected virtual void Move(float d)
 	{
-		float init = Mathf.Max(InitialHp, 0.001f);
+		Node2D target = PlayerNode();
+		if (target == null) return;
+		Vector2 to = target.GlobalPosition - GlobalPosition;
+		Seek(to, MaxSpeed, Accel, d);
+	}
+
+	/// <summary>朝 to 方向加减速移动;到目标附近减速(松软追尾,不硬停)。</summary>
+	protected void Seek(Vector2 to, float maxSpeed, float accel, float d)
+	{
+		float dist = to.Length();
+		if (dist <= 0.001f) return;
+		Vector2 dir = to / dist;
+		float desired = maxSpeed;
+		if (dist < 90f) desired = maxSpeed * (dist / 90f); // 近距缓行防撞挤
+		_velocity = _velocity.MoveToward(dir * desired, accel * d);
+		GlobalPosition += _velocity * d;
+	}
+
+	protected void AddDrift(Vector2 accelV, float d)
+	{
+		_velocity += accelV * d;
+		GlobalPosition += _velocity * d;
+	}
+
+	protected Node2D PlayerNode()
+	{
+		if (_target == null || !GodotObject.IsInstanceValid(_target))
+			_target = GetTree().GetFirstNodeInGroup("player") as Node2D;
+		return _target;
+	}
+
+	/// <summary>体型平滑趋近目标:d=0 直接对齐(出生/分裂瞬间)。</summary>
+	private void ApplyBody(float d)
+	{
+		float init = Mathf.Max(InitialHp, 0.01f);
 		float ratio = Hp / init;
-		float target = ratio >= 1f
-			? 1f + ScalePerLn * Mathf.Log(ratio)
-			: ratio;
+		float target = ratio >= 1f ? 1f + ScalePerLn * Mathf.Log(ratio) : ratio;
+		_growth = d > 0f ? Mathf.MoveToward(_growth, target, BodyGrowSpeed * d) : target;
+		_growth = Mathf.Max(_growth, 0f);
 
-		// d>0 时按速度平滑趋近目标；d=0（出生瞬间）直接对齐，不播过渡动画
-		_growth = d > 0f
-			? Mathf.MoveToward(_growth, target, RadiusChangeSpeed * d)
-			: target;
-		_growth = Mathf.Max(_growth, 0f); // 防除零/负倍率
-
-		if (_sprite != null)
-			_sprite.Scale = new Vector2(_growth, _growth);
-
-		// 碰撞圆与视觉同步缩放（形状在 _Ready 已 Duplicate，本实例独占，改半径不影响同类型其他个体）
-		if (_circle != null)
-			_circle.Radius = _baseRadius * _growth;
-
-		Radius = _baseRadius * _growth * Scale.X;
+		if (_circle != null) _circle.Radius = BodyRadius * _growth;
+		Radius = BodyRadius * _growth;
 	}
 }

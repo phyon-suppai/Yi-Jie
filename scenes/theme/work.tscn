@@ -1,0 +1,48 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://script/GameManager.cs" id="1_gm"]
+[ext_resource type="PackedScene" path="res://scenes/object/ground.tscn" id="2_ground"]
+[ext_resource type="PackedScene" path="res://scenes/object/player.tscn" id="3_player"]
+[ext_resource type="PackedScene" path="res://scenes/object/spawner.tscn" id="4_spawner"]
+[ext_resource type="PackedScene" path="res://scenes/worries/doubt.tscn" id="6_doubt"]
+[ext_resource type="PackedScene" path="res://scenes/worries/pressure.tscn" id="7_pressure"]
+[ext_resource type="PackedScene" path="res://scenes/worries/loneliness.tscn" id="8_loneliness"]
+
+[node name="Work" type="Node2D"]
+
+[node name="Ground" parent="." instance=ExtResource("2_ground")]
+
+[node name="Player" parent="." instance=ExtResource("3_player")]
+position = Vector2(-320, 0)
+
+[node name="Spawners" type="Node2D" parent="."]
+
+[node name="SpawnerA" parent="Spawners" instance=ExtResource("4_spawner")]
+position = Vector2(150, -330)
+Interval = 0.9
+DoubtWeight = 1
+PressureWeight = 8
+LonelinessWeight = 2
+
+[node name="SpawnerB" parent="Spawners" instance=ExtResource("4_spawner")]
+position = Vector2(-260, 330)
+Interval = 1.2
+DoubtWeight = 2
+PressureWeight = 7
+LonelinessWeight = 1
+
+[node name="SpawnerC" parent="Spawners" instance=ExtResource("4_spawner")]
+position = Vector2(900, 350)
+Interval = 1.4
+DoubtWeight = 1
+PressureWeight = 6
+LonelinessWeight = 3
+
+[node name="GameManager" type="Node" parent="."]
+script = ExtResource("1_gm")
+StartEnergy = 85.0
+ClampInset = 46.0
+NeighborRadius = 640.0
+DoubtScene = ExtResource("6_doubt")
+PressureScene = ExtResource("7_pressure")
+LonelinessScene = ExtResource("8_loneliness")

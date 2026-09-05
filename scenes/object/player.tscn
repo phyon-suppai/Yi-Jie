@@ -1,98 +1,17 @@
-[gd_scene format=3 uid="uid://dkknuobloxosp"]
+[gd_scene load_steps=5 format=3]
 
-[ext_resource type="Script" uid="uid://cvrwk72es6b25" path="res://script/Character.cs" id="1_drkdy"]
-[ext_resource type="Texture2D" uid="uid://dmmmwrgbvfb5u" path="res://assets/character/character-fall-0.png" id="1_wjbo1"]
-[ext_resource type="Texture2D" uid="uid://dnsw68ex2uoag" path="res://assets/character/character-idle-0.png" id="2_drkdy"]
-[ext_resource type="Texture2D" uid="uid://docn1g5fxreps" path="res://assets/character/character-idle-1.png" id="3_vyvc0"]
-[ext_resource type="Texture2D" uid="uid://cqawnab704a21" path="res://assets/character/character-idle-2.png" id="4_k2ihl"]
-[ext_resource type="Texture2D" uid="uid://bg6tgd88y2wmu" path="res://assets/character/character-idle-3.png" id="5_w7jaj"]
-[ext_resource type="Texture2D" uid="uid://b6kdqt4e7fuu4" path="res://assets/character/character-jump-0.png" id="6_jo58f"]
-[ext_resource type="Texture2D" uid="uid://dumax50tarl7j" path="res://assets/character/character-run-0.png" id="7_gi8n4"]
-[ext_resource type="Texture2D" uid="uid://bygt6rjbdhhxo" path="res://assets/character/character-run-1.png" id="8_ru0if"]
-[ext_resource type="Texture2D" uid="uid://bwumn8ggd6p5o" path="res://assets/character/character-run-2.png" id="9_fbjvd"]
-[ext_resource type="Texture2D" uid="uid://rkmc87e7fhok" path="res://assets/character/character-run-3.png" id="10_2p6sf"]
-[ext_resource type="PackedScene" uid="uid://cfgr7pn76ju2l" path="res://scenes/object/heart.tscn" id="12_vyvc0"]
-[ext_resource type="PackedScene" uid="uid://c72odrltx7axb" path="res://scenes/weapons/act.tscn" id="20_act"]
-[ext_resource type="PackedScene" uid="uid://lm5e351c7d2w" path="res://scenes/weapons/express.tscn" id="21_exp"]
-[ext_resource type="PackedScene" uid="uid://71ngwb758v0y" path="res://scenes/weapons/accept.tscn" id="22_acc"]
+[ext_resource type="Script" path="res://script/Character.cs" id="1_char"]
+[ext_resource type="PackedScene" path="res://scenes/weapons/act.tscn" id="2_act"]
+[ext_resource type="PackedScene" path="res://scenes/weapons/express.tscn" id="3_express"]
+[ext_resource type="PackedScene" path="res://scenes/weapons/accept.tscn" id="4_accept"]
 
-[sub_resource type="SpriteFrames" id="SpriteFrames_rh3mc"]
-animations = [{
-"frames": [{
-"duration": 1.0,
-"texture": ExtResource("1_wjbo1")
-}],
-"loop": 1,
-"name": &"fall",
-"speed": 5.0
-}, {
-"frames": [{
-"duration": 1.0,
-"texture": ExtResource("2_drkdy")
-}, {
-"duration": 1.0,
-"texture": ExtResource("3_vyvc0")
-}, {
-"duration": 1.0,
-"texture": ExtResource("4_k2ihl")
-}, {
-"duration": 1.0,
-"texture": ExtResource("5_w7jaj")
-}],
-"loop": 1,
-"name": &"idle",
-"speed": 5.0
-}, {
-"frames": [{
-"duration": 1.0,
-"texture": ExtResource("6_jo58f")
-}],
-"loop": 1,
-"name": &"jump",
-"speed": 5.0
-}, {
-"frames": [{
-"duration": 1.0,
-"texture": ExtResource("7_gi8n4")
-}, {
-"duration": 1.0,
-"texture": ExtResource("8_ru0if")
-}, {
-"duration": 1.0,
-"texture": ExtResource("9_fbjvd")
-}, {
-"duration": 1.0,
-"texture": ExtResource("10_2p6sf")
-}],
-"loop": 1,
-"name": &"run",
-"speed": 5.0
-}]
+[node name="Player" type="CharacterBody2D"]
+script = ExtResource("1_char")
+ActScene = ExtResource("2_act")
+ExpressScene = ExtResource("3_express")
+AcceptScene = ExtResource("4_accept")
 
-[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_dbpgs"]
-radius = 5.0
-height = 18.0
-
-[node name="Player" type="CharacterBody2D" unique_id=1265023306]
-collision_mask = 2
-script = ExtResource("1_drkdy")
-HorizontalSpeed = 300.0
-VerticalSpeed = 300.0
-TimeDrainRate = 2.0
-Hp = 100.0
-ActWeaponScene = ExtResource("20_act")
-ExpressWeaponScene = ExtResource("21_exp")
-AcceptWeaponScene = ExtResource("22_acc")
-
-[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=659651073]
-sprite_frames = SubResource("SpriteFrames_rh3mc")
-animation = &"idle"
-autoplay = "idle"
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1989550958]
-position = Vector2(-1, 7)
-shape = SubResource("CapsuleShape2D_dbpgs")
-
-[node name="Heart" parent="." unique_id=1962682440 instance=ExtResource("12_vyvc0")]
-position = Vector2(-1, 7)
-scale = Vector2(0.25, 0.25)
+[node name="Camera2D" type="Camera2D" parent="."]
+zoom = Vector2(0.55, 0.55)
+position_smoothing_enabled = true
+position_smoothing_speed = 6.0

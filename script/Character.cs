@@ -1,185 +1,196 @@
 using Godot;
+using System;
 
+/// <summary>
+/// 玩家:黄色自绘方块(亮黄框 + 暗黄芯) + 随 8 向朝向转的亮黄小三角。
+/// WASD 决定移动与朝向;
+/// J=行动·瞬发(无冷却连发), K=表达·按住飞出越远越慢、松开收回, L=接受·按住扩张越来越慢、松开消散。
+/// 精力/成就规则由 GameManager 持有的 EnergySystem 结算;本类只暴露站桩状态供其回能。
+/// </summary>
 public partial class Character : CharacterBody2D
 {
-	[Export] public float HorizontalSpeed;
-	[Export] public float VerticalSpeed;
+	[ExportGroup("移动")]
+	[Export(PropertyHint.Range, "40,800,5")] public float MoveSpeed { get; set; } = 380f;
+	[Export(PropertyHint.Range, "10,48,1")] public float BodyHalf { get; set; } = 26f; // 视觉方块半宽
 
-	[ExportGroup("精力")]
-	// 当前精力（也是精力上限）。归零即败。
-	[Export] public float Hp;
+	[ExportGroup("武器场景(1/2/3)")]
+	[Export] public PackedScene ActScene { get; set; }
+	[Export] public PackedScene ExpressScene { get; set; }
+	[Export] public PackedScene AcceptScene { get; set; }
 
-	[ExportGroup("精力 · 消耗（始终生效）")]
-	// 时间比例：每秒固定流失，哪怕站着不动也在扣。
-	[Export(PropertyHint.Range, "0,20,0.1")]
-	public float TimeDrainRate { get; set; } = 2f;
+	[ExportGroup("软锁定")]
+	[Export(PropertyHint.Range, "0,900,10")] public float LockRange { get; set; } = 520f;
+	[Export] public float LockStrength { get; set; } = 0.85f;
 
-	// 麻烦比例：场上每 1 个烦恼带来的额外流失（每秒）。
-	// 总消耗 = (时间比例 + 麻烦比例 × 场上烦恼数) × 时间
-	[Export(PropertyHint.Range, "0,8,0.1")]
-	public float WorryDrainRate { get; set; } = 3f;
-
-	[ExportGroup("精力 · 恢复（站桩时生效）")]
-	// 站桩回能（每秒）。判定：不移动且当前没有投掷任何技能。
-	// 与消耗并行结算，净变化 = 恢复 − 消耗。
-	// 默认 14 意味着场上 ≤4 个烦恼时站桩能净回复；烦恼再多就回不上了，必须清怪。
-	[Export(PropertyHint.Range, "0,40,0.1")]
-	public float RestoreRate { get; set; } = 14f;
-
-	[ExportGroup("武器")]
-	// 笔·行动（按下即发射，单体直线）
-	[Export] public PackedScene ActWeaponScene { get; set; }
-
-	// 纸·表达（按住伸出，松手返航，群体）
-	[Export] public PackedScene ExpressWeaponScene { get; set; }
-
-	// 橡皮·接纳（按住扩张，松手收缩，群体）
-	[Export] public PackedScene AcceptWeaponScene { get; set; }
-
-	// 当前朝向（单位向量）。静止时保持最后一次移动方向。
+	/// <summary>当前朝向(单位向量)。静止时保持最后朝向。</summary>
 	public Vector2 Facing { get; private set; } = Vector2.Down;
 
-	// 精力上限 = 初始精力（站桩回能不越过它）。
-	public float EnergyMax { get; private set; }
+	public Vector2 AimDirection => Facing;
 
-	// 当前是否处于站桩回能状态（供 HUD 提示）。
-	public bool Resting { get; private set; }
-
-	private AnimatedSprite2D _player;
-	private Heart _heart;
-
-	// 每个槽位各自在用的按住型武器实例（0=笔·瞬时；1=纸；2=橡皮）。各管各的键，互不打断。
-	private readonly IWeapon[] _heldWeapon = new IWeapon[3];
+	// 槽位 0=行动(J) 1=表达(K) 2=接受(L),与项目 Input Map 的 action 1/2/3 一致
 	private static readonly string[] SlotAction = { "action 1", "action 2", "action 3" };
-	private readonly float[] _cooldowns = new float[3];
+	private readonly float[] _cdLeft = new float[3];  // 剩余冷却
+	private readonly float[] _cdFull = new float[3];  // 本次冷却全长
+	private readonly IWeapon[] _heldWeapon = new IWeapon[3]; // 当前在场武器实例(Express/Accept 需要持续 Hold/Release)
+
+	private GameManager _gm;
+	public bool Resting { get; private set; } // 站桩回能:不移动且不施放
 
 	public override void _Ready()
 	{
-		// 加入 player 组：烦恼的追击逻辑依赖此组找到玩家
 		AddToGroup("player");
-		_player = GetNode<AnimatedSprite2D>("AnimatedSprite2D");
-		_heart = GetNode<Heart>("Heart");
-		EnergyMax = Mathf.Max(Hp, 1f);
-		_heart.Total = EnergyMax;
-		_heart.Current = Hp;
+		_gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+		if (_gm == null)
+			_gm = GetNodeOrNull<GameManager>("../GameManager");
 	}
+
+	public float CdRemain(int slot) => _cdLeft[slot];
+	public float CdFull(int slot) => _cdFull[slot];
 
 	public override void _PhysicsProcess(double delta)
 	{
-		UpdateCooldowns(delta);
-		HandleWeapons();
+		float d = (float)delta;
+		UpdateCooldowns(d);
+		if (_gm == null || !_gm.EventOpen)
+			HandleWeapons();
 
-		// GetVector 天然支持斜向，得到 8 方向输入
 		Vector2 input = Input.GetVector("left", "right", "up", "down");
-
 		if (input != Vector2.Zero)
-			Facing = input.Normalized(); // 静止时保持上一次朝向
+			Facing = input.Normalized(); // 8 方向;静止保持朝向
 
-		Velocity = new Vector2(input.X * HorizontalSpeed, input.Y * VerticalSpeed);
-
-		if (input != Vector2.Zero)
-			_player.FlipH = input.X < 0;
-
-		string anim = input == Vector2.Zero ? "idle" : "run";
-		if (_player.Animation != anim)
-			_player.Play(anim);
-
+		Velocity = input * MoveSpeed;
 		MoveAndSlide();
 
-		TickEnergy((float)delta, input);
-	}
-
-	// 精力按帧结算：消耗与恢复是两条独立的账，同时结算、互不相抵。
-	//   消耗：始终生效，= (时间比例 + 麻烦比例 × 场上烦恼数) × delta
-	//   恢复：仅站桩生效 = RestoreRate × delta
-	//   净变化 = 恢复 − 消耗。掉到 0 由 GameManager 判负，这里只做钳制。
-	private void TickEnergy(float delta, Vector2 input)
-	{
+		// 站桩回能判定:不移动且未按住任何武器键
 		bool casting = Input.IsActionPressed(SlotAction[0])
 			|| Input.IsActionPressed(SlotAction[1])
 			|| Input.IsActionPressed(SlotAction[2]);
-
 		Resting = input == Vector2.Zero && !casting;
 
-		int worryCount = GetTree().GetNodesInGroup("worry").Count;
-		float drain = (TimeDrainRate + WorryDrainRate * worryCount) * delta;
-		float restore = Resting ? RestoreRate * delta : 0f;
-
-		Hp = Mathf.Clamp(Hp + restore - drain, 0f, EnergyMax);
-		_heart.Current = Hp;
+		QueueRedraw(); // 朝向/受击都会改变画面(廉价矩形)
 	}
 
-	private void UpdateCooldowns(double delta)
+	private void UpdateCooldowns(float d)
 	{
-		for (int i = 0; i < _cooldowns.Length; i++)
-		{
-			if (_cooldowns[i] > 0f)
-				_cooldowns[i] = Mathf.Max(_cooldowns[i] - (float)delta, 0f);
-		}
+		for (int i = 0; i < _cdLeft.Length; i++)
+			_cdLeft[i] = Mathf.Max(_cdLeft[i] - d, 0f);
 	}
 
 	private void HandleWeapons()
 	{
-		// 笔：按下即发射，与按住无关
+		float d = (float)GetPhysicsProcessDeltaTime();
+
+		// 行动(J):瞬发,取消冷却限制
 		if (Input.IsActionJustPressed(SlotAction[0]))
-			Fire(ActWeaponScene, 0, held: false);
+			Fire(ActScene, 0);
 
-		// 纸 / 橡皮：每个按键各自独立。按住=续力，松开=自动回收；两把可同时在场，互不打断
+		// 表达(K)/接受(L):按住型,无冷却,但上一个收回前不能再发
 		for (int slot = 1; slot <= 2; slot++)
+			HandleHeldWeapon(slot);
+	}
+
+	private void HandleHeldWeapon(int slot)
+	{
+		PackedScene scene = slot == 1 ? ExpressScene : AcceptScene;
+		bool justPressed = Input.IsActionJustPressed(SlotAction[slot]);
+		bool pressed = Input.IsActionPressed(SlotAction[slot]);
+		bool justReleased = Input.IsActionJustReleased(SlotAction[slot]);
+
+		if (IsHeldWeaponReleased(slot))
 		{
-			if (Input.IsActionJustPressed(SlotAction[slot]))
-				Fire(slot == 1 ? ExpressWeaponScene : AcceptWeaponScene, slot, held: true);
-			PumpHeld(slot);
+			if (justPressed)
+				Fire(scene, slot);
+		}
+		else if (_heldWeapon[slot] != null)
+		{
+			if (pressed)
+				_heldWeapon[slot].Hold((float)GetPhysicsProcessDeltaTime());
+			if (justReleased)
+				_heldWeapon[slot].Release();
 		}
 	}
 
-	// 按槽位推进按住型武器：按住续力，松开开始回收；实例回收后清空槽位以便再发。
-	private void PumpHeld(int slot)
+	/// <summary>当前在场武器是否已经收回/消散( true 表示可以再发)。</summary>
+	private bool IsHeldWeaponReleased(int slot)
 	{
-		IWeapon w = _heldWeapon[slot];
-		if (w == null)
-			return;
-
-		// 实例已回收 / 销毁：清空该槽
-		if (!GodotObject.IsInstanceValid((GodotObject)w) || (w as Node)?.IsQueuedForDeletion() == true)
-		{
-			_heldWeapon[slot] = null;
-			return;
-		}
-
-		w.IsHeld = Input.IsActionPressed(SlotAction[slot]);
+		var w = _heldWeapon[slot];
+		if (w == null) return true;
+		if (w is GodotObject go && !GodotObject.IsInstanceValid(go)) return true;
+		return w.IsReleased;
 	}
 
-	// 实例化并发射一件武器，并让 GameManager 订阅它的命中信号（裁决唯一入口）。
-	private void Fire(PackedScene scene, int slot, bool held)
+	private void Fire(PackedScene scene, int slot)
 	{
-		if (scene == null || _cooldowns[slot] > 0f) return;
+		if (scene == null || _cdLeft[slot] > 0f || !IsHeldWeaponReleased(slot)) return;
 
 		Node inst = scene.Instantiate();
 		if (inst is not IWeapon weapon)
 		{
-			GD.PushWarning($"武器场景 {scene.ResourcePath} 未实现 IWeapon 接口");
+			GD.PushWarning($"武器场景 {scene.ResourcePath} 未实现 IWeapon");
 			return;
 		}
 		var body = (Node2D)inst;
-		GetTree().CurrentScene.AddChild(inst);
-
-		// 无角度自动纠正：发射即沿当前朝向直线打出，瞄准容差由场景里的碰撞箱半径提供
-		weapon.Launch(this, Facing);
 		body.GlobalPosition = GlobalPosition;
-		_cooldowns[slot] = weapon.Cooldown;
+		GetTree().CurrentScene.AddChild(body);
 
-		// 命中烦恼后统一交给裁决者
-		if (GetTree().GetFirstNodeInGroup("game_manager") is GameManager gm)
-			gm.AttachWeapon(body);
+		// 必须先订阅再发射:Accept Launch() 内部立即结算并上报 WorryHit,
+		// 若订阅晚于发射,本次(唯一一次)信号会被 GameManager 错过,导致命中没有伤害。
+		if (_gm != null)
+			_gm.AttachWeapon(body);
 
-		if (held)
+		Vector2 dir = AimDirection;
+		if (slot != 2) // 接受是范围,无朝向
+			dir = SoftLock(dir);
+		weapon.Launch(this, dir);
+		_heldWeapon[slot] = weapon;
+		_cdLeft[slot] = weapon.Cooldown;
+		_cdFull[slot] = Mathf.Max(_cdLeft[slot], 0.001f);
+	}
+
+	/// <summary>软锁定:±30° 锥内修正(仅改变方向,不把玩家拖去没指的目标)。</summary>
+	private Vector2 SoftLock(Vector2 raw)
+	{
+		if (raw == Vector2.Zero) raw = Vector2.Down;
+		raw = raw.Normalized();
+		if (_gm == null) return raw;
+
+		float cone = 0.866f; // cos30°
+		float bestDot = -1f;
+		Worry best = null;
+		foreach (Worry w in _gm.Worries)
 		{
-			// 同键重按：先让同槽旧实例开始回收，再出新实例（不影响另一把按住型武器）
-			IWeapon prev = _heldWeapon[slot];
-			if (prev != null && GodotObject.IsInstanceValid((GodotObject)prev))
-				prev.IsHeld = false;
-			_heldWeapon[slot] = weapon;
+			if (!GodotObject.IsInstanceValid(w)) continue;
+			Vector2 to = w.GlobalPosition - GlobalPosition;
+			float dist = to.Length();
+			if (dist > LockRange || dist < 1f) continue;
+			float dot = raw.Dot(to / dist);
+			if (dot >= cone && dot > bestDot)
+			{
+				bestDot = dot;
+				best = w;
+			}
 		}
+		if (best == null) return raw;
+		return raw.Lerp((best.GlobalPosition - GlobalPosition).Normalized(), LockStrength).Normalized();
+	}
+
+	public override void _Draw()
+	{
+		float half = BodyHalf;
+
+		Color frame = Palette.PlayerFrame;
+		Color core = Palette.PlayerCore;
+
+		// 亮黄框 + 暗黄芯
+		DrawRect(new Rect2(-half, -half, half * 2f, half * 2f), frame);
+		float inset = Mathf.Max(half * 0.2f, 3f);
+		DrawRect(new Rect2(-half + inset, -half + inset, (half - inset) * 2f, (half - inset) * 2f), core);
+
+		// 朝向小三角(亮黄,8 向可见)
+		Vector2 f = Facing.Normalized();
+		float ang = f.Angle();
+		Vector2 tip = new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * half;
+		Vector2 perp = new Vector2(-f.Y, f.X) * half * 0.5f;
+		DrawColoredPolygon(new[] { tip, tip - f * half * 0.7f + perp, tip - f * half * 0.7f - perp }, Palette.PlayerFrame);
 	}
 }

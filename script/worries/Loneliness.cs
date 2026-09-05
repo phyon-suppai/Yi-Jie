@@ -1,9 +1,19 @@
 using Godot;
 
 /// <summary>
-/// 孤：失落，半透明。行为骨架与追击逻辑在基类 Worry，
-/// 本类只标识类型；具体数值（初始血量、旋转速度等）见 loneliness.tscn。
+/// 孤:失落,半透明幽灵体。不再游离后退,而是像被忽视的存在感一样主动贴近玩家。
 /// </summary>
 public partial class Loneliness : Worry
 {
+	public override WorryType Kind => WorryType.Loneliness;
+
+	protected override void Move(float d)
+	{
+		Node2D target = PlayerNode();
+		if (target == null) return;
+
+		Vector2 to = target.GlobalPosition - GlobalPosition;
+		// 主动贴近玩家:幽灵般不紧不慢,但持续逼近
+		Seek(to, MaxSpeed * 0.9f, Accel * 0.9f, d);
+	}
 }
