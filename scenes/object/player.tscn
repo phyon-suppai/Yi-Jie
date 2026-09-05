@@ -10,8 +10,3 @@ script = ExtResource("1_char")
 ActScene = ExtResource("2_act")
 ExpressScene = ExtResource("3_express")
 AcceptScene = ExtResource("4_accept")
-
-[node name="Camera2D" type="Camera2D" parent="."]
-zoom = Vector2(0.55, 0.55)
-position_smoothing_enabled = true
-position_smoothing_speed = 6.0

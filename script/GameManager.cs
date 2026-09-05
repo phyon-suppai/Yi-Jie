@@ -48,6 +48,12 @@ public partial class GameManager : Node
 	private AudioManager _audio;
 	private readonly RandomNumberGenerator _rng = new();
 
+	// 场景里与玩家"并列"的相机(已在各关卡 .tscn 中声明,Godot 会将其自动激活为当前相机)。
+	// 这里只在物理帧平滑移动它,不再运行时 AddChild/MakeCurrent,规避激活时序问题。
+	private Camera2D _camera;
+	private const float CameraSmoothSpeed = 4f; // exp 平滑权重系数,越小惯性越强/尾随感越明显,越大跟得越紧
+
+
 	private bool _finished;                 // 是否已进入结算态(胜/负)
 	private int _seedLeft = 2;              // 开局先让两个生成器立刻产一只,避免空场发呆
 	public bool EventOpen { get; private set; } // 特殊事件弹窗是否打开
@@ -64,6 +70,20 @@ public partial class GameManager : Node
 		_player = GetTree().GetFirstNodeInGroup("player") as Character;
 		if (_player == null)
 			_player = GetNodeOrNull<Character>("../Player");
+
+		// 引用关卡场景(.tscn)中声明的、与玩家并列的 Camera2D。
+		// 它随父场景进入树,此刻已在树内,直接激活为当前相机是安全的(不再运行时创建)。
+		_camera = GetNodeOrNull<Camera2D>("../Camera2D");
+		if (_camera != null)
+		{
+			_camera.MakeCurrent();
+			// 初始直接对齐玩家,避免从原点慢慢"飘"向玩家造成开局画面错位
+			if (_player != null)
+				_camera.GlobalPosition = _player.GlobalPosition;
+		}
+		else
+			GD.PushWarning("[GM] 未在关卡场景找到并列 Camera2D(../Camera2D),请确认 .tscn 中已添加。");
+
 
 		// HUD(自绘)与暗角在运行时创建,零 UI 场景依赖
 		var hudLayer = new CanvasLayer { Layer = 40 };
@@ -106,6 +126,23 @@ public partial class GameManager : Node
 	private static Vector2 ClampToRect(Vector2 v, Rect2 r)
 	{
 		return new Vector2(Mathf.Clamp(v.X, r.Position.X, r.End.X), Mathf.Clamp(v.Y, r.Position.Y, r.End.Y));
+	}
+
+	// 在物理帧平滑跟随玩家:与 CharacterBody2D 玩家同频,减少错位。
+	// 权重 weight = 1 - exp(-speed*delta) 为帧率无关的指数平滑,避免 lerp 系数过小"卡住",
+	// 也避免过高导致相机生硬。speed 取 12 既能跟住角色又不过度拖影。
+	public override void _PhysicsProcess(double delta)
+	{
+		FollowPlayer((float)delta);
+	}
+
+	private void FollowPlayer(float delta)
+	{
+		if (_camera == null || !GodotObject.IsInstanceValid(_camera)) return;
+		if (_player == null || !GodotObject.IsInstanceValid(_player)) return;
+
+		float weight = 1f - Mathf.Exp(-CameraSmoothSpeed * delta);
+		_camera.GlobalPosition = _camera.GlobalPosition.Lerp(_player.GlobalPosition, weight);
 	}
 
 	public override void _Process(double delta)
