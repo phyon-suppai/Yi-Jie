@@ -33,6 +33,16 @@ public partial class GameManager : Node
 	/// <summary>结算展示多少秒后自动重开新一轮</summary>
 	[Export] public float ResultDelay { get; set; } = 3f;
 
+	[ExportGroup("HUD 配色")]
+	/// <summary>精力条填充色（蓝）</summary>
+	[Export] public Color EnergyColor { get; set; } = new Color(0.24f, 0.62f, 1f);
+
+	/// <summary>成就条填充色（黄）</summary>
+	[Export] public Color AchieveColor { get; set; } = new Color(1f, 0.79f, 0.22f);
+
+	/// <summary>竖条槽底色</summary>
+	[Export] public Color SlotColor { get; set; } = new Color(0.05f, 0.07f, 0.11f, 0.72f);
+
 	/// <summary>可生成的烦恼场景（未绑定对应项则跳过该类型）</summary>
 	[Export] public PackedScene DoubtScene { get; set; }
 	[Export] public PackedScene PressureScene { get; set; }
@@ -44,7 +54,11 @@ public partial class GameManager : Node
 	/// <summary>是否已进入结算态（胜利或失败），此后不再补怪 / 裁决 / 计分</summary>
 	public bool Finished { get; private set; }
 
-	private TextEdit _text;
+	// HUD：右侧两根竖条（左蓝=精力，右黄=成就）+ 顶部结算文案
+	private ProgressBar _energyBar;
+	private ProgressBar _achieveBar;
+	private Label _message;
+
 	private Character _player;
 	private float _spawnTimer;
 	private RandomNumberGenerator _rng = new();
@@ -53,9 +67,24 @@ public partial class GameManager : Node
 	public override void _Ready()
 	{
 		AddToGroup("game_manager");
-		_text = GetNode<TextEdit>("../HpText");
 		_player = GetNode<Character>("../Player");
-		_text.Editable = false;
+
+		// 用 OrNull：没有 HUD 的场景（如后续关卡）也不会崩
+		_energyBar = GetNodeOrNull<ProgressBar>("../Hud/Bars/EnergyBar");
+		_achieveBar = GetNodeOrNull<ProgressBar>("../Hud/Bars/AchieveBar");
+		_message = GetNodeOrNull<Label>("../Hud/Message");
+
+		if (_energyBar != null)
+		{
+			_energyBar.MaxValue = _player.EnergyMax;
+			ApplyBarStyle(_energyBar, EnergyColor);
+		}
+		if (_achieveBar != null)
+		{
+			_achieveBar.MaxValue = AchieveGoal;
+			ApplyBarStyle(_achieveBar, AchieveColor);
+		}
+
 		_rng.Randomize();
 		_pool = new PackedScene[] { DoubtScene, PressureScene, LonelinessScene };
 	}
@@ -74,10 +103,33 @@ public partial class GameManager : Node
 			Finish("成就圆满，闯关成功！即将开启新一轮…");
 	}
 
+	// 用代码上色而非场景里的 theme_override：Godot 编辑器保存场景时会清掉手工写的 StyleBoxFlat 资源
+	private void ApplyBarStyle(ProgressBar bar, Color fillColor)
+	{
+		var slot = new StyleBoxFlat();
+		slot.BgColor = SlotColor;
+		slot.CornerRadiusTopLeft = 6;
+		slot.CornerRadiusTopRight = 6;
+		slot.CornerRadiusBottomRight = 6;
+		slot.CornerRadiusBottomLeft = 6;
+
+		var fill = new StyleBoxFlat();
+		fill.BgColor = fillColor;
+		fill.CornerRadiusTopLeft = 6;
+		fill.CornerRadiusTopRight = 6;
+		fill.CornerRadiusBottomRight = 6;
+		fill.CornerRadiusBottomLeft = 6;
+
+		bar.AddThemeStyleboxOverride("background", slot);
+		bar.AddThemeStyleboxOverride("fill", fill);
+	}
+
 	private void UpdateHud()
 	{
-		string rest = _player.Resting ? "　站桩回能中…" : "";
-		_text.Text = $"精力 {_player.Hp:F0} / {_player.EnergyMax:F0}　成就 {Achieve} / {AchieveGoal}{rest}";
+		if (_energyBar != null)
+			_energyBar.Value = _player.Hp;
+		if (_achieveBar != null)
+			_achieveBar.Value = Achieve;
 	}
 
 	private void SpawnWorries(float delta)
@@ -141,7 +193,8 @@ public partial class GameManager : Node
 		if (Finished)
 			return;
 		Finished = true;
-		_text.Text += $"\n{message}";
+		if (_message != null)
+			_message.Text = message;
 		_player.SetPhysicsProcess(false); // 结算时冻结玩家行动，便于看清结局
 
 		GetTree().CreateTimer(ResultDelay).Timeout += () =>

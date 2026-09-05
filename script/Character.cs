@@ -9,18 +9,22 @@ public partial class Character : CharacterBody2D
 	// 当前精力（也是精力上限）。归零即败。
 	[Export] public float Hp;
 
-	// 基础流失（每秒），与是否行动无关，常驻扣除。
+	[ExportGroup("精力 · 消耗（始终生效）")]
+	// 时间比例：每秒固定流失，哪怕站着不动也在扣。
 	[Export(PropertyHint.Range, "0,20,0.1")]
-	public float BleedRate { get; set; } = 2f;
+	public float TimeDrainRate { get; set; } = 2f;
 
-	// 场上每存在 1 个烦恼带来的额外流失（每秒）。麻烦越多掉得越快。
+	// 麻烦比例：场上每 1 个烦恼带来的额外流失（每秒）。
+	// 总消耗 = (时间比例 + 麻烦比例 × 场上烦恼数) × 时间
 	[Export(PropertyHint.Range, "0,8,0.1")]
-	public float DrainPerWorry { get; set; } = 3f;
+	public float WorryDrainRate { get; set; } = 3f;
 
+	[ExportGroup("精力 · 恢复（站桩时生效）")]
 	// 站桩回能（每秒）。判定：不移动且当前没有投掷任何技能。
-	// 场上 ≤2 个烦恼时站桩可净回复；怪聚多了站桩也回不上来，必须清怪。
-	[Export(PropertyHint.Range, "0,30,0.1")]
-	public float RestoreRate { get; set; } = 10f;
+	// 与消耗并行结算，净变化 = 恢复 − 消耗。
+	// 默认 14 意味着场上 ≤4 个烦恼时站桩能净回复；烦恼再多就回不上了，必须清怪。
+	[Export(PropertyHint.Range, "0,40,0.1")]
+	public float RestoreRate { get; set; } = 14f;
 
 	[ExportGroup("武器")]
 	// 笔·行动（按下即发射，单体直线）
@@ -83,8 +87,10 @@ public partial class Character : CharacterBody2D
 		TickEnergy((float)delta, input);
 	}
 
-	// 精力按帧结算：麻烦越多掉得越快；站着不动且不丢技能则回能。
-	// 掉到 0 由 GameManager 判负，这里只做钳制。
+	// 精力按帧结算：消耗与恢复是两条独立的账，同时结算、互不相抵。
+	//   消耗：始终生效，= (时间比例 + 麻烦比例 × 场上烦恼数) × delta
+	//   恢复：仅站桩生效 = RestoreRate × delta
+	//   净变化 = 恢复 − 消耗。掉到 0 由 GameManager 判负，这里只做钳制。
 	private void TickEnergy(float delta, Vector2 input)
 	{
 		bool casting = Input.IsActionPressed(SlotAction[0])
@@ -93,14 +99,11 @@ public partial class Character : CharacterBody2D
 
 		Resting = input == Vector2.Zero && !casting;
 
-		if (Resting && Hp < EnergyMax)
-			Hp = Mathf.Min(Hp + RestoreRate * delta, EnergyMax);
-		else
-		{
-			int worryCount = GetTree().GetNodesInGroup("worry").Count;
-			Hp = Mathf.Max(Hp - (BleedRate + DrainPerWorry * worryCount) * delta, 0f);
-		}
+		int worryCount = GetTree().GetNodesInGroup("worry").Count;
+		float drain = (TimeDrainRate + WorryDrainRate * worryCount) * delta;
+		float restore = Resting ? RestoreRate * delta : 0f;
 
+		Hp = Mathf.Clamp(Hp + restore - drain, 0f, EnergyMax);
 		_heart.Current = Hp;
 	}
 
