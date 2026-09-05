@@ -17,15 +17,11 @@ scale = Vector2(4, 4)
 position = Vector2(-17.5, -7.75)
 scale = Vector2(0.25, 0.25)
 
-[node name="HpText" type="TextEdit" parent="." unique_id=940649110]
-offset_left = 461.0
-offset_top = -325.0
-offset_right = 580.0
-offset_bottom = -63.0
-text = "Hp = "
-
 [node name="GameManager" parent="." unique_id=1822463583 instance=ExtResource("3_r0gdh")]
 script = ExtResource("4_bxitf")
+DoubtScene = ExtResource("6_r0gdh")
+PressureScene = ExtResource("8_lcn1m")
+LonelinessScene = ExtResource("7_imp15")
 
 [node name="Doubt" parent="." unique_id=1731095924 instance=ExtResource("6_r0gdh")]
 position = Vector2(88, -161)

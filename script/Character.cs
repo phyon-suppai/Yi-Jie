@@ -4,24 +4,42 @@ public partial class Character : CharacterBody2D
 {
 	[Export] public float HorizontalSpeed;
 	[Export] public float VerticalSpeed;
-	[Export] public float BleedRate;
 
+	[ExportGroup("精力")]
+	// 当前精力（也是精力上限）。归零即败。
 	[Export] public float Hp;
 
+	// 基础流失（每秒），与是否行动无关，常驻扣除。
+	[Export(PropertyHint.Range, "0,20,0.1")]
+	public float BleedRate { get; set; } = 2f;
+
+	// 场上每存在 1 个烦恼带来的额外流失（每秒）。麻烦越多掉得越快。
+	[Export(PropertyHint.Range, "0,8,0.1")]
+	public float DrainPerWorry { get; set; } = 3f;
+
+	// 站桩回能（每秒）。判定：不移动且当前没有投掷任何技能。
+	// 场上 ≤2 个烦恼时站桩可净回复；怪聚多了站桩也回不上来，必须清怪。
+	[Export(PropertyHint.Range, "0,30,0.1")]
+	public float RestoreRate { get; set; } = 10f;
+
 	[ExportGroup("武器")]
-	/// <summary>笔·行动（按下即发射，单体直线）</summary>
+	// 笔·行动（按下即发射，单体直线）
 	[Export] public PackedScene ActWeaponScene { get; set; }
 
-	/// <summary>纸·表达（按住伸出，松手返航，群体）</summary>
+	// 纸·表达（按住伸出，松手返航，群体）
 	[Export] public PackedScene ExpressWeaponScene { get; set; }
 
-	/// <summary>橡皮·接纳（按住扩张，松手收缩，群体）</summary>
+	// 橡皮·接纳（按住扩张，松手收缩，群体）
 	[Export] public PackedScene AcceptWeaponScene { get; set; }
 
-	/// <summary>当前朝向（单位向量）。静止时保持最后一次移动方向。</summary>
+	// 当前朝向（单位向量）。静止时保持最后一次移动方向。
 	public Vector2 Facing { get; private set; } = Vector2.Down;
 
-	private Timer _timer;
+	// 精力上限 = 初始精力（站桩回能不越过它）。
+	public float EnergyMax { get; private set; }
+
+	// 当前是否处于站桩回能状态（供 HUD 提示）。
+	public bool Resting { get; private set; }
 
 	private AnimatedSprite2D _player;
 	private Heart _heart;
@@ -34,26 +52,10 @@ public partial class Character : CharacterBody2D
 	public override void _Ready()
 	{
 		_player = GetNode<AnimatedSprite2D>("AnimatedSprite2D");
-		_timer = new Timer();
-		_timer.WaitTime = 1.0;
-		_timer.Timeout += Bleed;
-		AddChild(_timer);
-		_timer.Start();
 		_heart = GetNode<Heart>("Heart");
-		_heart.Total = Hp;
+		EnergyMax = Mathf.Max(Hp, 1f);
+		_heart.Total = EnergyMax;
 		_heart.Current = Hp;
-	}
-
-	private void Bleed()
-	{
-		Hp -= BleedRate;
-		_heart.Current = Hp;
-		if (Hp <= 0)
-		{
-			Hp = 0;
-			_heart.Current = 0;
-			GD.Print("精力耗尽");
-		}
 	}
 
 	public override void _PhysicsProcess(double delta)
@@ -72,9 +74,34 @@ public partial class Character : CharacterBody2D
 		if (input != Vector2.Zero)
 			_player.FlipH = input.X < 0;
 
-		_player.Play(input == Vector2.Zero ? "idle" : "run");
+		string anim = input == Vector2.Zero ? "idle" : "run";
+		if (_player.Animation != anim)
+			_player.Play(anim);
 
 		MoveAndSlide();
+
+		TickEnergy((float)delta, input);
+	}
+
+	// 精力按帧结算：麻烦越多掉得越快；站着不动且不丢技能则回能。
+	// 掉到 0 由 GameManager 判负，这里只做钳制。
+	private void TickEnergy(float delta, Vector2 input)
+	{
+		bool casting = Input.IsActionPressed(SlotAction[0])
+			|| Input.IsActionPressed(SlotAction[1])
+			|| Input.IsActionPressed(SlotAction[2]);
+
+		Resting = input == Vector2.Zero && !casting;
+
+		if (Resting && Hp < EnergyMax)
+			Hp = Mathf.Min(Hp + RestoreRate * delta, EnergyMax);
+		else
+		{
+			int worryCount = GetTree().GetNodesInGroup("worry").Count;
+			Hp = Mathf.Max(Hp - (BleedRate + DrainPerWorry * worryCount) * delta, 0f);
+		}
+
+		_heart.Current = Hp;
 	}
 
 	private void UpdateCooldowns(double delta)
@@ -101,7 +128,7 @@ public partial class Character : CharacterBody2D
 		}
 	}
 
-	/// <summary>按槽位推进按住型武器：按住续力，松开开始回收；实例回收后清空槽位以便再发。</summary>
+	// 按槽位推进按住型武器：按住续力，松开开始回收；实例回收后清空槽位以便再发。
 	private void PumpHeld(int slot)
 	{
 		IWeapon w = _heldWeapon[slot];
@@ -118,7 +145,7 @@ public partial class Character : CharacterBody2D
 		w.IsHeld = Input.IsActionPressed(SlotAction[slot]);
 	}
 
-	/// <summary>实例化并发射一件武器</summary>
+	// 实例化并发射一件武器，并让 GameManager 订阅它的命中信号（裁决唯一入口）。
 	private void Fire(PackedScene scene, int slot, bool held)
 	{
 		if (scene == null || _cooldowns[slot] > 0f) return;
@@ -136,6 +163,10 @@ public partial class Character : CharacterBody2D
 		weapon.Launch(this, Facing);
 		body.GlobalPosition = GlobalPosition;
 		_cooldowns[slot] = weapon.Cooldown;
+
+		// 命中烦恼后统一交给裁决者
+		if (GetTree().GetFirstNodeInGroup("game_manager") is GameManager gm)
+			gm.AttachWeapon(body);
 
 		if (held)
 		{
