@@ -8,6 +8,9 @@ radius = 258.04843
 
 [node name="Loneliness" type="Area2D" unique_id=810447205]
 script = ExtResource("1_w1yws")
+InitialHp = 20.0
+RotationSpeed = -30.0
+MaxSpeedFactor = 4.0
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=726924875]
 texture = ExtResource("1_01yf0")

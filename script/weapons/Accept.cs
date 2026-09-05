@@ -1,24 +1,32 @@
 using Godot;
-using System.Collections.Generic;
 
 /// <summary>
-/// 橡皮·接纳：以玩家为圆心，按住扩张半径、松手收缩归零；
-/// 圈内命中的所有烦恼都被上报（群体范围）。无朝向概念。
-/// <para>独立类，不继承公共武器基类。命中烦恼只上报信号，裁决由 GameManager 统一负责。</para>
+/// 橡皮·接纳：以玩家为圆心，按住扩张半径、松手收缩归零。
+/// <para>
+/// 伤害与「接触时间」成正比：圈内的烦恼每帧按 delta 上报接触时长，
+/// 持续贴着就持续掉血；扩张得越大、罩住越久，总伤害越高。
+/// </para>
 /// </summary>
 public partial class Accept : Area2D, IWeapon
 {
-	/// <summary>命中一个烦恼时发出（参数为被命中的烦恼节点）。由 GameManager 订阅后裁决。</summary>
+	/// <summary>接触烦恼时发出（参数：被命中的烦恼、本帧接触时长）。由 GameManager 订阅后裁决。</summary>
 	[Signal]
-	public delegate void WorryHitEventHandler(Node2D worry);
+	public delegate void WorryHitEventHandler(Node2D worry, float amount);
 
 	[ExportGroup("冷却")]
 	[Export] public float Cooldown { get; set; } = 1.2f;
 
+	[ExportGroup("伤害")]
+	// 每秒接触造成的伤害（DPS）。实际伤害 = 本系数 × 接触秒数。
+	// 参考：60 表示贴满 1 秒造成 60 点伤害，圈内所有烦恼同时结算
+	[Export(PropertyHint.Range, "0,300,1")]
+	public float Damage { get; set; } = 60f;
+
 	[ExportGroup("范围")]
 	[Export] public float StartRadius { get; set; } = 0f;
 	[Export] public float ExpandSpeed { get; set; } = 320f;
-	[Export] public float MaxRadius { get; set; } = 130f;
+	// 伤害靠接触时间累积，半径太小玩家根本贴不上，故默认给到 180
+	[Export] public float MaxRadius { get; set; } = 180f;
 	[Export] public float ShrinkSpeed { get; set; } = 420f;
 
 	[ExportGroup("外观（占位，可在编辑器里另挂 Sprite2D 绑定真贴图）")]
@@ -33,19 +41,12 @@ public partial class Accept : Area2D, IWeapon
 	private CircleShape2D _shape; // 每次发射新建一个实例，避免实例间共享形状
 	private float _radius;
 	private bool _shrinking;
-	private readonly HashSet<Node> _hit = new();
-
-	public override void _Ready()
-	{
-		AreaEntered += OnAreaEntered;
-	}
 
 	public void Launch(Node2D owner, Vector2 direction)
 	{
 		_launcher = owner;
 		_radius = StartRadius;
 		_shrinking = false;
-		_hit.Clear();
 
 		// 用独立的碰撞圆，半径随 IsHeld 实时变化
 		var cs = GetNodeOrNull<CollisionShape2D>("CollisionShape2D");
@@ -82,6 +83,23 @@ public partial class Accept : Area2D, IWeapon
 
 		SyncPosition();
 		ApplyRadius();
+		BurnContacts(d);
+	}
+
+	/// <summary>圈内的烦恼按本帧接触时长上报伤害量（烦恼中心落在圈内即算接触）。</summary>
+	private void BurnContacts(float d)
+	{
+		if (_radius <= 0f)
+			return;
+
+		foreach (Node node in GetTree().GetNodesInGroup("worry"))
+		{
+			if (node is not Worry worry || !GodotObject.IsInstanceValid(worry) || worry.IsQueuedForDeletion())
+				continue;
+
+			if (worry.GlobalPosition.DistanceTo(GlobalPosition) <= _radius)
+				EmitSignal(SignalName.WorryHit, worry, d);
+		}
 	}
 
 	private void SyncPosition()
@@ -99,15 +117,6 @@ public partial class Accept : Area2D, IWeapon
 		if (_shape != null)
 			_shape.Radius = Mathf.Max(_radius, 1f); // 保持最小半径，碰撞检测才有效
 		QueueRedraw();
-	}
-
-	private void OnAreaEntered(Area2D area)
-	{
-		if (!area.IsInGroup("worry"))
-			return;
-		if (!_hit.Add(area))
-			return;
-		EmitSignal(SignalName.WorryHit, area); // 群体：范围持续期内继续上报新进入的烦恼
 	}
 
 	public override void _Draw()

@@ -164,26 +164,35 @@ public partial class GameManager : Node
 		worry.Scale = Vector2.One * _rng.RandfRange(0.25f, 0.45f);
 	}
 
-	/// <summary>由 Character 在发射时调用：订阅这件武器的命中上报。</summary>
+	/// <summary>
+	/// 由 Character 在发射时调用：订阅这件武器的命中上报。
+	/// 实际伤害 = 武器上报的量 × 武器的伤害系数；
+	/// 量的含义各武器不同：笔=1（恒定）、纸=划过长度、橡皮=接触秒数。
+	/// </summary>
 	public void AttachWeapon(Node2D weapon)
 	{
 		switch (weapon)
 		{
-			case Act act:   act.WorryHit   += OnWorryHit; break;
-			case Express ex: ex.WorryHit   += OnWorryHit; break;
-			case Accept acc: acc.WorryHit  += OnWorryHit; break;
+			case Act act:    act.WorryHit  += (w, amount) => OnWorryHit(w, amount * act.Damage);  break;
+			case Express ex: ex.WorryHit   += (w, amount) => OnWorryHit(w, amount * ex.Damage);   break;
+			case Accept acc: acc.WorryHit  += (w, amount) => OnWorryHit(w, amount * acc.Damage);  break;
 		}
 	}
 
-	/// <summary>裁决：命中烦恼即消散（达成移除一个「麻烦」），累计成就。</summary>
-	private void OnWorryHit(Node2D worry)
+	/// <summary>裁决：命中先扣血，血量归零才算消散（此时才结算成就）。</summary>
+	private void OnWorryHit(Node2D worry, float damage)
 	{
 		if (Finished || worry == null || !GodotObject.IsInstanceValid(worry))
 			return;
 		if (!worry.IsInGroup("worry") || worry.IsQueuedForDeletion())
 			return;
+		if (worry is not Worry target)
+			return;
 
-		worry.QueueFree();
+		bool dissolved = target.TakeDamage(damage); // 未致死只掉血，不消失
+		if (!dissolved)
+			return;
+
 		Achieve = Mathf.Min(Achieve + AchievePerWorry, AchieveGoal);
 		GD.Print($"烦恼消散 +{AchievePerWorry} 成就，当前 {Achieve}/{AchieveGoal}");
 	}

@@ -260,6 +260,7 @@ tile_set = SubResource("TileSet_dbpgs")
 [node name="Player" parent="." unique_id=1265023306 instance=ExtResource("2_3kbb2")]
 position = Vector2(-209, 38)
 scale = Vector2(4, 4)
+Hp = 300.0
 
 [node name="Camera" type="Camera2D" parent="Player" unique_id=161997939]
 position = Vector2(-1, 7.25)
@@ -283,10 +284,14 @@ scale = Vector2(0.3, 0.3)
 [node name="Loneliness" parent="." unique_id=810447205 instance=ExtResource("7_imp15")]
 position = Vector2(-464, -284)
 scale = Vector2(0.4, 0.4)
+InitialHp = 10.0
+RotationSpeed = 90.0
 
 [node name="Pressure" parent="." unique_id=1528972601 instance=ExtResource("8_lcn1m")]
 position = Vector2(-642, 12)
 scale = Vector2(0.2, 0.2)
+InitialHp = 10.0
+RotationSpeed = 90.0
 
 [node name="Hud" type="CanvasLayer" parent="." unique_id=1257725534]
 layer = 10

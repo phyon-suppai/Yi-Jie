@@ -14,6 +14,13 @@ public interface IWeapon
 	float Cooldown { get; }
 
 	/// <summary>
+	/// 伤害系数。实际伤害 = 本系数 × 武器随命中上报的「量（amount）」。
+	/// amount 的含义由各武器自行定义：笔=1（一次命中，伤害恒定）；
+	/// 纸=划过烦恼的线段长度；橡皮=接触时长（秒）。
+	/// </summary>
+	float Damage { get; }
+
+	/// <summary>
 	/// 玩家是否正按住对应按键（纸与橡皮据此决定伸长 / 扩张）。
 	/// 由持有者每帧写入；笔不使用（按下即发射，与按住无关）。
 	/// </summary>

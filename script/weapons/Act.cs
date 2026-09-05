@@ -7,12 +7,18 @@ using System.Collections.Generic;
 /// </summary>
 public partial class Act : Area2D, IWeapon
 {
-	/// <summary>命中一个烦恼时发出（参数为被命中的烦恼节点）。由 GameManager 订阅后裁决。</summary>
+	/// <summary>命中一个烦恼时发出（参数：被命中的烦恼、伤害量）。由 GameManager 订阅后裁决。</summary>
 	[Signal]
-	public delegate void WorryHitEventHandler(Node2D worry);
+	public delegate void WorryHitEventHandler(Node2D worry, float amount);
 
 	[ExportGroup("冷却")]
 	[Export] public float Cooldown { get; set; } = 0.4f;
+
+	[ExportGroup("伤害")]
+	// 伤害恒定：每次命中上报 amount = 1，实际伤害就是这个值本身。
+	// 单体高伤、射程远：冷却仅 0.4 秒，理论 60 点/秒
+	[Export(PropertyHint.Range, "0,200,0.5")]
+	public float Damage { get; set; } = 24f;
 
 	[ExportGroup("弹道")]
 	[Export] public float Speed { get; set; } = 900f;
@@ -62,7 +68,7 @@ public partial class Act : Area2D, IWeapon
 			return;
 		if (!_hit.Add(area))
 			return;
-		EmitSignal(SignalName.WorryHit, area);
+		EmitSignal(SignalName.WorryHit, area, 1f); // 固定量 1：伤害恒定
 		QueueFree(); // 单体：命中一个即止
 	}
 

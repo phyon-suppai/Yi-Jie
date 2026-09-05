@@ -8,6 +8,9 @@ radius = 262.1221
 
 [node name="Pressure" type="Area2D" unique_id=1528972601]
 script = ExtResource("1_looyk")
+InitialHp = 15.0
+RotationSpeed = 45.0
+MaxSpeedFactor = 4.0
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=1602027627]
 texture = ExtResource("1_lpsfe")

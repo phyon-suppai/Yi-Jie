@@ -1,19 +1,27 @@
 using Godot;
-using System.Collections.Generic;
 
 /// <summary>
 /// 纸·表达：掷出后沿发射方向惯性直线飞行（按“原来的路线”走，不受玩家移动牵连），
-/// 不画连接线；松开按键自动直线飞回角色身边。路径上命中的所有烦恼都被上报（群体）。
-/// <para>独立类，不继承公共武器基类。命中烦恼只上报信号，裁决由 GameManager 统一负责。</para>
+/// 不画连接线；松开按键自动直线飞回角色身边。
+/// <para>
+/// 伤害与「划过烦恼的线段长度」成正比：每帧用移动线段与烦恼的圆求交，
+/// 按重叠弦长上报伤害量。去程与回程各自结算，悬停不动时不造成伤害。
+/// </para>
 /// </summary>
 public partial class Express : Area2D, IWeapon
 {
-	/// <summary>命中一个烦恼时发出（参数为被命中的烦恼节点）。由 GameManager 订阅后裁决。</summary>
+	/// <summary>划过烦恼时发出（参数：被命中的烦恼、本帧划过的弦长）。由 GameManager 订阅后裁决。</summary>
 	[Signal]
-	public delegate void WorryHitEventHandler(Node2D worry);
+	public delegate void WorryHitEventHandler(Node2D worry, float amount);
 
 	[ExportGroup("冷却")]
 	[Export] public float Cooldown { get; set; } = 0.6f;
+
+	[ExportGroup("伤害")]
+	// 每划过 1 世界单位长度造成的伤害。实际伤害 = 本系数 × 划过长度。
+	// 参考：划过半径 80 的烦恼（直径约 160）单程 ≈ 26 点；大烦恼划过的弦更长，伤害更高。
+	[Export(PropertyHint.Range, "0,1,0.005")]
+	public float Damage { get; set; } = 0.16f;
 
 	[ExportGroup("弹道")]
 	/// <summary>掷出后的飞行速度（惯性，脱手后玩家移动不影响它的路线）</summary>
@@ -38,13 +46,6 @@ public partial class Express : Area2D, IWeapon
 	private Vector2 _origin;   // 掷出瞬间的起点，决定去程直线与射程上限
 	private float _travel;     // 已飞行的去程距离
 	private bool _returning;
-	// 去程与回程都会扫过同一个烦恼，去重只上报一次
-	private readonly HashSet<Node> _hit = new();
-
-	public override void _Ready()
-	{
-		AreaEntered += OnAreaEntered;
-	}
 
 	public void Launch(Node2D owner, Vector2 direction)
 	{
@@ -53,7 +54,6 @@ public partial class Express : Area2D, IWeapon
 		_origin = owner.GlobalPosition;
 		_travel = 0f;
 		_returning = false;
-		_hit.Clear();
 		GlobalPosition = _origin;
 		QueueRedraw();
 	}
@@ -67,6 +67,7 @@ public partial class Express : Area2D, IWeapon
 		}
 
 		float d = (float)delta;
+		Vector2 prev = GlobalPosition; // 本帧起点，用于算划过的线段
 
 		if (!_returning)
 		{
@@ -89,22 +90,55 @@ public partial class Express : Area2D, IWeapon
 			float step = ReturnSpeed * d;
 			if (dist <= step)
 			{
-				QueueFree(); // 收回到身边
+				GlobalPosition = _launcher.GlobalPosition;
+				SweepHits(prev); // 收尾这最后一段也要结算
+				QueueFree();
 				return;
 			}
 			GlobalPosition += toLauncher / dist * step;
 		}
 
+		SweepHits(prev);
 		QueueRedraw();
 	}
 
-	private void OnAreaEntered(Area2D area)
+	/// <summary>用本帧的移动线段与每个烦恼求交，按划过的弦长上报伤害量。</summary>
+	private void SweepHits(Vector2 from)
 	{
-		if (!area.IsInGroup("worry"))
-			return;
-		if (!_hit.Add(area))
-			return;
-		EmitSignal(SignalName.WorryHit, area); // 群体：不销毁自身，路径上继续上报
+		Vector2 move = GlobalPosition - from;
+		float len = move.Length();
+		if (len <= 0.0001f)
+			return; // 悬停不动＝没有划过，不造成伤害
+
+		Vector2 dir = move / len;
+
+		foreach (Node node in GetTree().GetNodesInGroup("worry"))
+		{
+			if (node is not Worry worry || !GodotObject.IsInstanceValid(worry) || worry.IsQueuedForDeletion())
+				continue;
+
+			float overlap = SegmentCircleOverlap(from, dir, len, worry.GlobalPosition, Mathf.Max(worry.Radius, 1f));
+			if (overlap > 0f)
+				EmitSignal(SignalName.WorryHit, worry, overlap);
+		}
+	}
+
+	/// <summary>线段 [from, from + dir × len] 与圆 (center, radius) 的重叠长度（弦长）。</summary>
+	private static float SegmentCircleOverlap(Vector2 from, Vector2 dir, float len, Vector2 center, float radius)
+	{
+		// 圆心在线段所在直线上的投影参数（夹到线段内）
+		float t = Mathf.Clamp((center - from).Dot(dir), 0f, len);
+		Vector2 closest = from + dir * t;
+		float dist = (center - closest).Length();
+
+		if (dist >= radius)
+			return 0f;
+
+		// 弦长的一半：由最近点向两侧展开，再与 [0, len] 取交集
+		float half = Mathf.Sqrt(radius * radius - dist * dist);
+		float lo = Mathf.Max(t - half, 0f);
+		float hi = Mathf.Min(t + half, len);
+		return Mathf.Max(hi - lo, 0f);
 	}
 
 	public override void _Draw()

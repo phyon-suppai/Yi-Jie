@@ -55,6 +55,8 @@ public partial class Character : CharacterBody2D
 
 	public override void _Ready()
 	{
+		// 加入 player 组：烦恼的追击逻辑依赖此组找到玩家
+		AddToGroup("player");
 		_player = GetNode<AnimatedSprite2D>("AnimatedSprite2D");
 		_heart = GetNode<Heart>("Heart");
 		EnergyMax = Mathf.Max(Hp, 1f);

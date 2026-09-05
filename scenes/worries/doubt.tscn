@@ -8,6 +8,7 @@ radius = 274.52686
 
 [node name="Doubt" type="Area2D" unique_id=1731095924]
 script = ExtResource("1_lbbi3")
+MaxSpeedFactor = 4.0
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=676242907]
 texture = ExtResource("1_pg4uv")
