@@ -1,0 +1,135 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://script/TitleScreen.cs" id="1_title"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_normal"]
+bg_color = Color(0.82, 0.16, 0.24, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_left = 4
+corner_radius_bottom_right = 4
+content_margin_left = 40.0
+content_margin_top = 14.0
+content_margin_right = 40.0
+content_margin_bottom = 14.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_hover"]
+bg_color = Color(0.94, 0.32, 0.38, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_left = 4
+corner_radius_bottom_right = 4
+content_margin_left = 40.0
+content_margin_top = 14.0
+content_margin_right = 40.0
+content_margin_bottom = 14.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_pressed"]
+bg_color = Color(0.55, 0.08, 0.13, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_left = 4
+corner_radius_bottom_right = 4
+content_margin_left = 40.0
+content_margin_top = 14.0
+content_margin_right = 40.0
+content_margin_bottom = 14.0
+
+[sub_resource type="SystemFont" id="SystemFont_cn"]
+font_names = PackedStringArray("Noto Sans CJK SC", "Microsoft YaHei", "SimHei", "PingFang SC", "Source Han Sans SC")
+
+[node name="TitleScreen" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_title")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.055, 0.06, 0.09, 1)
+
+[node name="VignetteTop" type="ColorRect" parent="."]
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -640.0
+offset_top = -360.0
+offset_right = 640.0
+offset_bottom = -280.0
+color = Color(0.3, 0.05, 0.1, 0.35)
+
+[node name="Root" type="VBoxContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 240.0
+offset_top = 70.0
+offset_right = -240.0
+offset_bottom = -60.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 22
+
+[node name="HeartLabel" type="Label" parent="Root"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.92, 0.2, 0.26, 1)
+theme_override_font_sizes/font_size = 40
+theme_override_fonts/font = SubResource("SystemFont_cn")
+text = "♥"
+horizontal_alignment = 1
+
+[node name="TitleLabel" type="Label" parent="Root"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.95, 0.97, 1)
+theme_override_font_sizes/font_size = 72
+theme_override_fonts/font = SubResource("SystemFont_cn")
+text = "溢界"
+horizontal_alignment = 1
+
+[node name="Tagline1" type="Label" parent="Root"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.82, 0.85, 1)
+theme_override_font_sizes/font_size = 22
+theme_override_fonts/font = SubResource("SystemFont_cn")
+text = "当全世界都告诉你必须长大，我们选择先停下来，面对自己"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="Tagline2" type="Label" parent="Root"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.68, 0.72, 1)
+theme_override_font_sizes/font_size = 18
+theme_override_fonts/font = SubResource("SystemFont_cn")
+text = "这次“我”将穿越时空，回到迷茫困顿的时刻，帮助自己直面内心深处的痛苦"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="Spacer" type="Control" parent="Root"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="StartButton" type="Button" parent="Root"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 0.9, 0.9, 1)
+theme_override_font_sizes/font_size = 26
+theme_override_fonts/font = SubResource("SystemFont_cn")
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_normal")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_pressed")
+text = "开始游戏"
+
+[node name="Hint" type="Label" parent="Root"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.52, 0.56, 1)
+theme_override_font_sizes/font_size = 14
+theme_override_fonts/font = SubResource("SystemFont_cn")
+text = "或按 回车 开始"
+horizontal_alignment = 1

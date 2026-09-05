@@ -9,6 +9,7 @@ public partial class Hud : Node2D
 	private float _energyFrac;
 	private float _achieveFrac;
 	private readonly float[] _cd = new float[3]; // 0 就绪;>0 剩余冷却
+	private string _stageLabel = "";
 	private Font _font;
 
 	public override void _Ready()
@@ -21,13 +22,14 @@ public partial class Hud : Node2D
 	}
 
 	/// <summary>GameManager 每帧调一次;仅在可视数值变化时重绘。</summary>
-	public void Refresh(float energyFrac, float achieveFrac, float cdAct, float cdExpress, float cdAccept)
+	public void Refresh(float energyFrac, float achieveFrac, float cdAct, float cdExpress, float cdAccept, string stageLabel = "")
 	{
 		_energyFrac = energyFrac;
 		_achieveFrac = achieveFrac;
 		_cd[0] = cdAct;
 		_cd[1] = cdExpress;
 		_cd[2] = cdAccept;
+		_stageLabel = stageLabel;
 		QueueRedraw();
 	}
 
@@ -37,6 +39,13 @@ public partial class Hud : Node2D
 		float barW = Mathf.Min(vp.X * 0.30f, 380f);
 		float barH = 20f;
 		float x0 = 28f, y0 = 30f;
+
+		// 左上角关卡标签
+		if (!string.IsNullOrEmpty(_stageLabel))
+		{
+			DrawString(_font, new Vector2(x0, y0 - 6f), _stageLabel,
+				HorizontalAlignment.Left, -1, 16, Palette.TextMain);
+		}
 
 		DrawBar(new Vector2(x0, y0), new Vector2(barW, barH), _energyFrac,
 			Palette.PlayerFrame, Palette.PlayerCore, "精力");

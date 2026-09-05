@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="溢界"
-run/main_scene="res://scenes/play/level_01_doubt.tscn"
+run/main_scene="res://scenes/title_screen.tscn"
 config/features=PackedStringArray("4.7", "C#", "Forward Plus")
 
 [display]

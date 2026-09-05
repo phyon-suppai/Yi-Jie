@@ -43,7 +43,9 @@ public partial class SpecialEventSpawner : Node2D
 
 		if (_gm == null || _player == null || !GodotObject.IsInstanceValid(_player)) return;
 		if (EventIds == null || EventIds.Length == 0) return;
-		if (_gm.EventOpen)
+
+		// 已有弹窗打开或场上仍有未触发的特殊方块时,暂停计时并禁止生成
+		if (_gm.EventOpen || HasAliveSpecialBlock())
 		{
 			_timer = 0f;
 			return;
@@ -62,6 +64,16 @@ public partial class SpecialEventSpawner : Node2D
 			_timer = 0f;
 			SpawnNext();
 		}
+	}
+
+	private bool HasAliveSpecialBlock()
+	{
+		foreach (Node n in GetTree().GetNodesInGroup("special_event_block"))
+		{
+			if (GodotObject.IsInstanceValid(n) && !n.IsQueuedForDeletion())
+				return true;
+		}
+		return false;
 	}
 
 	private void SpawnNext()

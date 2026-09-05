@@ -1,0 +1,139 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://script/ui/IntroOverlay.cs" id="1_intro"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.05, 0.06, 0.09, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.35, 0.38, 0.45, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_normal"]
+content_margin_left = 44.0
+content_margin_top = 12.0
+content_margin_right = 44.0
+content_margin_bottom = 12.0
+bg_color = Color(0.82, 0.16, 0.24, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_pressed"]
+content_margin_left = 44.0
+content_margin_top = 12.0
+content_margin_right = 44.0
+content_margin_bottom = 12.0
+bg_color = Color(0.55, 0.08, 0.13, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_hover"]
+content_margin_left = 44.0
+content_margin_top = 12.0
+content_margin_right = 44.0
+content_margin_bottom = 12.0
+bg_color = Color(0.94, 0.32, 0.38, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[node name="IntroOverlay" type="CanvasLayer"]
+process_mode = 3
+script = ExtResource("1_intro")
+
+[node name="Dim" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.72)
+
+[node name="Center" type="CenterContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="Panel" parent="Center"]
+layout_mode = 2
+custom_minimum_size = Vector2(820, 520)
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Margin" type="MarginContainer" parent="Center/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 40.0
+offset_top = 28.0
+offset_right = -40.0
+offset_bottom = -28.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="Center/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="TitleLabel" type="Label" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.95, 0.97, 1)
+theme_override_font_sizes/font_size = 30
+text = "世界规则"
+horizontal_alignment = 1
+
+[node name="StoryLabel" type="Label" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
+theme_override_font_sizes/font_size = 17
+text = "这是一场与内心情绪的对话。不同时期有不同的烦恼——怀疑、焦虑、孤独。我们需要在正确的时间里，用正确的方式面对它们。"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="Rule" type="HSeparator" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+
+[node name="MechanicLabel" type="Label" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.9, 0.94, 1)
+theme_override_font_sizes/font_size = 17
+text = "💜 精力：会随时间流失，被烦恼缠身时掉得更快；击碎烦恼、正确应对特殊事件，可回补精力。
+
+🕹 移动 —— W A S D
+🎯 攻击 —— J（行动·绿）K（表达·蓝）L（接受·红）
+🎨 同色克制：绿色行动克怀疑、蓝色表达克孤独、红色接受克焦虑。
+
+⚠ 特殊方块会快速冲向你，触发内心对话，用 J / K / L 三选一。
+    正确面对会恢复精力；错误逃避会扣除精力，并额外刷新焦虑方块。
+
+🚪 通关 —— 在当前阶段积累足够的成就值，即可进入下一时期。"
+autowrap_mode = 2
+
+[node name="Spacer" type="Control" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="StartButton" type="Button" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 0.92, 0.92, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 22
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_normal")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_pressed")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
+text = "开始战斗"

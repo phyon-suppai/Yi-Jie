@@ -12,8 +12,19 @@ using System.Linq;
 public partial class GameManager : Node
 {
 	[ExportGroup("关卡参数")]
-	[Export(PropertyHint.Range, "0,100,1")] public float StartEnergy { get; set; } = 100f;
+	[Export(PropertyHint.Range, "0,200,1")] public float StartEnergy { get; set; } = 100f;
+	[Export(PropertyHint.Range, "50,200,5")] public float MaxEnergy { get; set; } = 100f;   // 精力上限(血条厚度)
+	[Export(PropertyHint.Range, "50,500,10")] public float AchieveGoal { get; set; } = 200f; // 本关需要达成的成就值
+	[Export] public string StageLabel { get; set; } = ""; // 左上角显示的阶段名称
 	[Export(PropertyHint.Range, "1,10,0.5")] public float ResultDelay { get; set; } = 3f; // 结算后重开倒计时
+
+	[ExportGroup("烦恼强度(本关统一覆盖)")]
+	[Export(PropertyHint.Range, "5,30,1")] public float WorryInitialHp { get; set; } = 10f;
+	[Export(PropertyHint.Range, "20,100,1")] public float WorryMaxHp { get; set; } = 40f;
+	[Export(PropertyHint.Range, "1,8,0.1")] public float WorryHpGrowRate { get; set; } = 2.5f;
+	[Export(PropertyHint.Range, "30,150,1")] public float WorryMaxSpeed { get; set; } = 65f;
+	[Export(PropertyHint.Range, "100,500,10")] public float WorryAccel { get; set; } = 180f;
+	[Export(PropertyHint.Range, "20,50,1")] public float WorryBodyRadius { get; set; } = 28f;
 
 	[ExportGroup("烦恼场景(裁决/生成用)")]
 	[Export] public PackedScene DoubtScene { get; set; }
@@ -46,7 +57,7 @@ public partial class GameManager : Node
 	{
 		AddToGroup("game_manager");
 		_rng.Randomize();
-		EnergySystem = new EnergySystem(StartEnergy);
+		EnergySystem = new EnergySystem(StartEnergy, MaxEnergy, AchieveGoal);
 
 		_player = GetTree().GetFirstNodeInGroup("player") as Character;
 		if (_player == null)
@@ -127,17 +138,39 @@ public partial class GameManager : Node
 		if (_finished) return;
 		if (EnergySystem.Energy <= 0f)
 			Finish("精力耗尽，闯关失败…即将重新开始");
-		else if (EnergySystem.Achieve >= ReactionTable.MaxAchieve)
+		else if (EnergySystem.Achieve >= EnergySystem.MaxAchieve)
 			Finish("成就圆满，闯关成功！即将开始新一轮…");
 	}
+
+	[Export] public string NextLevelPath { get; set; } = ""; // 胜利后进入的下一关路径
 
 	private void Finish(string msg)
 	{
 		_finished = true;
 		GD.Print(msg);
-		GetTree().CreateTimer(ResultDelay).Timeout += () =>
+
+		bool victory = EnergySystem.Achieve >= EnergySystem.MaxAchieve;
+
+		GetTree().CreateTimer(0.6).Timeout += () =>
 		{
-			if (GetTree() != null)
+			if (GetTree() == null) return;
+			if (victory)
+			{
+				if (!string.IsNullOrEmpty(NextLevelPath))
+				{
+					GetTree().ChangeSceneToFile(NextLevelPath);
+				}
+				else
+				{
+					GetTree().ReloadCurrentScene();
+				}
+				return;
+			}
+
+			var defeat = GD.Load<PackedScene>("res://scenes/ui/defeat_panel.tscn");
+			if (defeat != null)
+				GetTree().CurrentScene.AddChild(defeat.Instantiate());
+			else
 				GetTree().ReloadCurrentScene();
 		};
 	}
@@ -183,6 +216,7 @@ public partial class GameManager : Node
 		{
 			Node inst = PressureScene.Instantiate();
 			if (inst is not Worry worry) { inst.QueueFree(); continue; }
+			ApplyWorryProfile(worry);
 
 			GetTree().CurrentScene.AddChild(worry);
 			float ang = rng.RandfRange(0f, Mathf.Tau);
@@ -227,6 +261,7 @@ public partial class GameManager : Node
 
 		Node inst = scene.Instantiate();
 		if (inst is not Worry worry) { inst.QueueFree(); return; }
+		ApplyWorryProfile(worry);
 
 		// 生成器附近随机落点
 		float ang = _rng.RandfRange(0f, Mathf.Tau);
@@ -234,6 +269,16 @@ public partial class GameManager : Node
 		GetTree().CurrentScene.AddChild(worry);
 		worry.GlobalPosition = s.GlobalPosition + offset;
 		RegisterWorry(worry);
+	}
+
+	private void ApplyWorryProfile(Worry w)
+	{
+		w.InitialHp = WorryInitialHp;
+		w.MaxHp = WorryMaxHp;
+		w.HpGrowRate = WorryHpGrowRate;
+		w.MaxSpeed = WorryMaxSpeed;
+		w.Accel = WorryAccel;
+		w.BodyRadius = WorryBodyRadius;
 	}
 
 	private PackedScene SceneFor(WorryType t)
@@ -293,7 +338,7 @@ public partial class GameManager : Node
 		{
 			EnergySystem.ApplyDissolve(); // 成就 +N
 					RemoveWorry(target);          // 立即移出计数,消散动画期间不再算作场上烦恼
-					GD.Print($"消散 {target.Kind} → 成就+{ReactionTable.DissolveAchieveBonus:F0} (当前 {EnergySystem.Achieve:F0}/{ReactionTable.MaxAchieve:F0})");
+					GD.Print($"消散 {target.Kind} → 成就+{ReactionTable.DissolveAchieveBonus:F0} (当前 {EnergySystem.Achieve:F0}/{EnergySystem.MaxAchieve:F0})");
 		}
 	}
 
@@ -310,6 +355,7 @@ public partial class GameManager : Node
 		_hud.Refresh(
 			frac,
 			EnergySystem.AchieveFraction,
-			_player.CdRemain(0), _player.CdRemain(1), _player.CdRemain(2));
+			_player.CdRemain(0), _player.CdRemain(1), _player.CdRemain(2),
+			StageLabel);
 	}
 }

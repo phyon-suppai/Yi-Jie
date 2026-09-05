@@ -13,17 +13,19 @@ public sealed class EnergySystem
 	private float _energy;
 	private float _achieve;
 
-	public EnergySystem(float startEnergy)
+	public EnergySystem(float startEnergy, float maxEnergy, float maxAchieve)
 	{
-		MaxEnergy = 100f;
+		MaxEnergy = Math.Max(maxEnergy, 1f);
+		MaxAchieve = Math.Max(maxAchieve, 1f);
 		_energy = Math.Clamp(startEnergy, 0f, MaxEnergy);
 		_achieve = 0f;
 	}
 
 	public float MaxEnergy { get; }
+	public float MaxAchieve { get; }
 	public float Energy => _energy;
 	public float Achieve => _achieve;
-	public float AchieveFraction => _achieve / ReactionTable.MaxAchieve;
+	public float AchieveFraction => _achieve / MaxAchieve;
 
 	/// <summary>
 	/// 每帧推进:
@@ -38,10 +40,10 @@ public sealed class EnergySystem
 		_energy = Mathf.Clamp(_energy + restore - drain, 0f, MaxEnergy);
 	}
 
-	/// <summary>消散:每解决一个烦恼,成就 +15,并恢复精力。</summary>
+	/// <summary>消散:每解决一个烦恼,成就 +N,并恢复精力。</summary>
 	public void ApplyDissolve()
 	{
-		_achieve = Math.Min(_achieve + ReactionTable.DissolveAchieveBonus, ReactionTable.MaxAchieve);
+		_achieve = Math.Min(_achieve + ReactionTable.DissolveAchieveBonus, MaxAchieve);
 		_energy = Math.Min(_energy + ReactionTable.KillEnergyRestore, MaxEnergy);
 	}
 

@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://script/GameManager.cs" id="1_gm"]
 [ext_resource type="PackedScene" path="res://scenes/object/ground.tscn" id="2_ground"]
@@ -10,9 +10,25 @@
 [ext_resource type="PackedScene" path="res://scenes/worries/special_event_block.tscn" id="9_special"]
 [ext_resource type="Script" path="res://script/SpecialEventSpawner.cs" id="10_spawner"]
 
+[sub_resource type="SystemFont" id="SystemFont_cn"]
+font_names = PackedStringArray("Noto Sans CJK SC", "Microsoft YaHei", "SimHei")
+
 [node name="Level03Loneliness" type="Node2D"]
 
+[node name="Backdrop" type="CanvasLayer" parent="."]
+layer = -10
+
+[node name="Background" type="ColorRect" parent="Backdrop"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.14, 0.07, 0.26, 1)
+
 [node name="Ground" parent="." instance=ExtResource("2_ground")]
+FillColor = Color(0.14, 0.07, 0.26, 1)
+BorderColor = Color(0.58, 0.38, 0.85, 1)
 
 [node name="Player" parent="." instance=ExtResource("3_player")]
 position = Vector2(-320, 0)
@@ -20,42 +36,69 @@ position = Vector2(-320, 0)
 [node name="Spawners" type="Node2D" parent="."]
 
 [node name="SpawnerA" parent="Spawners" instance=ExtResource("4_spawner")]
-position = Vector2(150, -330)
-Interval = 0.7
+position = Vector2(-680, -380)
+Interval = 1.0
 MaxAlive = 10
 DoubtWeight = 1
 PressureWeight = 2
 LonelinessWeight = 8
 
 [node name="SpawnerB" parent="Spawners" instance=ExtResource("4_spawner")]
-position = Vector2(-260, 330)
-Interval = 0.9
+position = Vector2(640, 360)
+Interval = 1.2
 MaxAlive = 11
 DoubtWeight = 2
 PressureWeight = 1
 LonelinessWeight = 7
 
 [node name="SpawnerC" parent="Spawners" instance=ExtResource("4_spawner")]
-position = Vector2(900, 350)
-Interval = 1.1
+position = Vector2(-100, -580)
+Interval = 1.4
 MaxAlive = 12
 DoubtWeight = 3
 PressureWeight = 1
 LonelinessWeight = 6
 
+[node name="SpawnerD" parent="Spawners" instance=ExtResource("4_spawner")]
+position = Vector2(760, -220)
+Interval = 1.6
+MaxAlive = 13
+DoubtWeight = 1
+PressureWeight = 2
+LonelinessWeight = 7
+
+[node name="SpawnerE" parent="Spawners" instance=ExtResource("4_spawner")]
+position = Vector2(-760, 240)
+Interval = 1.8
+MaxAlive = 14
+DoubtWeight = 2
+PressureWeight = 1
+LonelinessWeight = 7
+
 [node name="SpecialEventSpawner" type="Node2D" parent="."]
 script = ExtResource("10_spawner")
 BlockScene = ExtResource("9_special")
 EventIds = PackedStringArray("elder_regret", "elder_loneliness", "elder_worry_young")
-Interval = 10.0
+Interval = 12.0
 SpawnDistance = 1200.0
-FirstSpawnAtAchieve = 25.0
-SecondSpawnAtAchieve = 110.0
-ThirdSpawnAtAchieve = 190.0
+FirstSpawnAtAchieve = 35.0
+SecondSpawnAtAchieve = 160.0
+ThirdSpawnAtAchieve = 260.0
 
 [node name="GameManager" type="Node" parent="."]
 script = ExtResource("1_gm")
-StartEnergy = 70.0
+StartEnergy = 80.0
+MaxEnergy = 140.0
+AchieveGoal = 300.0
+StageLabel = "老年时期"
+NextLevelPath = "res://scenes/ui/ending_overlay.tscn"
+ResultDelay = 3.0
+WorryInitialHp = 18.0
+WorryMaxHp = 70.0
+WorryHpGrowRate = 4.0
+WorryMaxSpeed = 95.0
+WorryAccel = 260.0
+WorryBodyRadius = 32.0
 ClampInset = 46.0
 NeighborRadius = 640.0
 DoubtScene = ExtResource("6_doubt")

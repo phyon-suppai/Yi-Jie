@@ -8,6 +8,8 @@ public partial class Ground : Node2D
 {
 	[Export] public float Width { get; set; } = 2600f;
 	[Export] public float Height { get; set; } = 1700f;
+	[Export] public Color FillColor { get; set; } = Palette.Ground;
+	[Export] public Color BorderColor { get; set; } = Palette.PurpleFrame;
 
 	public Rect2 ArenaRect => new Rect2(-Width / 2f, -Height / 2f, Width, Height);
 
@@ -20,8 +22,8 @@ public partial class Ground : Node2D
 	{
 		Rect2 r = ArenaRect;
 		// 中紫活动地面
-		DrawRect(r, Palette.Ground);
+		DrawRect(r, FillColor);
 		// 亮紫四周边框(世界边界 = 「暗紫纸上的亮框」)
-		DrawRect(r, Palette.PurpleFrame, false, 8f);
+		DrawRect(r, BorderColor, false, 8f);
 	}
 }

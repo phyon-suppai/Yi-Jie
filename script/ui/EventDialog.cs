@@ -4,8 +4,8 @@ using System.Collections.Generic;
 
 /// <summary>
 /// 特殊事件三选一弹窗(游戏不暂停)。
-/// 第一行标题+题目,第二行 J/K/L 三个选项左右中平分。
-/// 选择后,选中的选项像烦恼消散那样快速渐亮再渐隐消失。
+/// 视觉学习示例图:深色面板 + 白色标题 + 垂直大按钮 + 底部细白倒计时条。
+/// 选项默认灰色底,选择后:正确闪绿/错误闪红,其余变暗,弹窗快速消失。
 /// </summary>
 public partial class EventDialog : CanvasLayer
 {
@@ -14,19 +14,23 @@ public partial class EventDialog : CanvasLayer
 
 	private Label _title;
 	private Label _desc;
-	private readonly List<Label> _optionLabels = new();
-	private readonly List<PanelContainer> _optionPanels = new();
+	private readonly List<Button> _optionButtons = new();
 	private readonly List<StyleBoxFlat> _optionStyles = new();
+	private ProgressBar _timerBar;
 
 	private bool _resolving;
 	private int _chosenIndex = -1;
 	private double _flashT;
+	private double _elapsed;
 	private const double FlashDuration = 0.55;
+	private const double ChoiceTimeout = 6.0; // 超时自动选 A(J)
 
-	private Color _idleOptionBg = new Color("#2C1257");
-	private Color _idleOptionBorder = new Color("#7A5FD0");
-	private Color _correctColor = new Color("#39FF88"); // 荧光绿
-	private Color _wrongColor = new Color("#FF3B3B");   // 荧光红
+	private Color _idleBg = new Color("#1E1E2E");
+	private Color _idleBorder = new Color("#5A5A6E");
+	private Color _correctBorder = new Color("#4DFF88");
+	private Color _correctGlow = new Color("#4DFF88", 0.55f);
+	private Color _wrongBorder = new Color("#FF4D6D");
+	private Color _wrongGlow = new Color("#FF4D6D", 0.55f);
 
 	public override void _Ready()
 	{
@@ -34,10 +38,31 @@ public partial class EventDialog : CanvasLayer
 
 		var panel = new Panel();
 		panel.SetAnchorsPreset(Control.LayoutPreset.Center);
-		panel.Size = new Vector2(1180, 480);
-		panel.Position = new Vector2(-590, -240);
-		panel.AddThemeStyleboxOverride("panel", MakeStyle(new Color("#1A0F2E"), new Color("#C58CFF"), 5));
+		panel.Size = new Vector2(860, 520);
+		panel.Position = new Vector2(-430, -260);
+		panel.AddThemeStyleboxOverride("panel", new StyleBoxFlat
+		{
+			BgColor = new Color("#101018"),
+			BorderColor = new Color("#6A6A8A"),
+			BorderWidthBottom = 2,
+			BorderWidthLeft = 2,
+			BorderWidthRight = 2,
+			BorderWidthTop = 2,
+			CornerRadiusBottomLeft = 16,
+			CornerRadiusBottomRight = 16,
+			CornerRadiusTopLeft = 16,
+			CornerRadiusTopRight = 16
+		});
 		AddChild(panel);
+
+		var column = new VBoxContainer();
+		column.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+		column.OffsetLeft = 42;
+		column.OffsetTop = 32;
+		column.OffsetRight = -42;
+		column.OffsetBottom = -32;
+		column.AddThemeConstantOverride("separation", 18);
+		panel.AddChild(column);
 
 		Font font = new SystemFont
 		{
@@ -45,74 +70,94 @@ public partial class EventDialog : CanvasLayer
 		};
 
 		_title = new Label();
-		_title.SetAnchorsPreset(Control.LayoutPreset.TopWide);
-		_title.OffsetLeft = 30; _title.OffsetTop = 20;
-		_title.OffsetRight = -30; _title.OffsetBottom = 84;
 		_title.HorizontalAlignment = HorizontalAlignment.Center;
 		_title.VerticalAlignment = VerticalAlignment.Center;
 		_title.AutowrapMode = TextServer.AutowrapMode.Word;
 		_title.AddThemeFontOverride("font", font);
-		_title.AddThemeFontSizeOverride("font_size", 34);
-		_title.AddThemeColorOverride("font_color", new Color("#FFE05C"));
-		panel.AddChild(_title);
+		_title.AddThemeFontSizeOverride("font_size", 30);
+		_title.AddThemeColorOverride("font_color", new Color("#FFFFFF"));
+		column.AddChild(_title);
 
 		_desc = new Label();
-		_desc.SetAnchorsPreset(Control.LayoutPreset.TopWide);
-		_desc.OffsetLeft = 60; _desc.OffsetTop = 92;
-		_desc.OffsetRight = -60; _desc.OffsetBottom = 190;
 		_desc.HorizontalAlignment = HorizontalAlignment.Center;
 		_desc.VerticalAlignment = VerticalAlignment.Center;
 		_desc.AutowrapMode = TextServer.AutowrapMode.Word;
 		_desc.AddThemeFontOverride("font", font);
-		_desc.AddThemeFontSizeOverride("font_size", 22);
-		_desc.AddThemeColorOverride("font_color", new Color("#F1E9FF"));
-		panel.AddChild(_desc);
+		_desc.AddThemeFontSizeOverride("font_size", 18);
+		_desc.AddThemeColorOverride("font_color", new Color("#CCCCDD"));
+		column.AddChild(_desc);
 
-		float areaTop = 210, areaBottom = 440;
-		float areaLeft = 36, areaRight = panel.Size.X - 36;
-		float width = areaRight - areaLeft;
+		var buttonColumn = new VBoxContainer();
+		buttonColumn.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+		buttonColumn.AddThemeConstantOverride("separation", 18);
+		column.AddChild(buttonColumn);
+
 		for (int i = 0; i < 3; i++)
 		{
-			var box = new PanelContainer();
-			float x0 = areaLeft + i * width / 3f;
-			float x1 = areaLeft + (i + 1) * width / 3f;
-			box.SetAnchorsPreset(Control.LayoutPreset.TopLeft);
-			box.Position = new Vector2(x0, areaTop);
-			box.Size = new Vector2(x1 - x0 - 12f, areaBottom - areaTop);
+			var btn = new Button();
+			btn.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
+			btn.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+			btn.CustomMinimumSize = new Vector2(776, 0);
+			btn.AddThemeFontOverride("font", font);
+			btn.AddThemeFontSizeOverride("font_size", 22);
+			btn.AddThemeColorOverride("font_color", new Color("#FFFFFF"));
+			btn.AddThemeColorOverride("font_hover_color", new Color("#FFFFFF"));
+			btn.AddThemeColorOverride("font_pressed_color", new Color("#FFFFFF"));
 
-			var style = MakeStyle(_idleOptionBg, _idleOptionBorder, 3);
-			box.AddThemeStyleboxOverride("panel", style);
+			var style = MakeGlowStyle(_idleBg, _idleBorder, new Color("#000000", 0f));
+			btn.AddThemeStyleboxOverride("normal", style);
+			btn.AddThemeStyleboxOverride("hover", style);
+			btn.AddThemeStyleboxOverride("pressed", style);
+			buttonColumn.AddChild(btn);
 
-			var lbl = new Label();
-			lbl.HorizontalAlignment = HorizontalAlignment.Center;
-			lbl.VerticalAlignment = VerticalAlignment.Center;
-			lbl.AutowrapMode = TextServer.AutowrapMode.Word;
-			lbl.AddThemeFontOverride("font", font);
-			lbl.AddThemeFontSizeOverride("font_size", 19);
-			lbl.AddThemeColorOverride("font_color", new Color("#FFFFFF"));
-			box.AddChild(lbl);
-
-			panel.AddChild(box);
-			_optionPanels.Add(box);
+			int captured = i;
+			btn.Pressed += () => Choose(captured);
+			_optionButtons.Add(btn);
 			_optionStyles.Add(style);
-			_optionLabels.Add(lbl);
 		}
+
+		_timerBar = new ProgressBar();
+		_timerBar.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
+		_timerBar.CustomMinimumSize = new Vector2(776, 2);
+		_timerBar.MaxValue = ChoiceTimeout;
+		_timerBar.Value = ChoiceTimeout;
+		_timerBar.ShowPercentage = false;
+		_timerBar.AddThemeStyleboxOverride("background", new StyleBoxFlat
+		{
+			BgColor = new Color("#303040"),
+			CornerRadiusBottomLeft = 1,
+			CornerRadiusBottomRight = 1,
+			CornerRadiusTopLeft = 1,
+			CornerRadiusTopRight = 1
+		});
+		_timerBar.AddThemeStyleboxOverride("fill", new StyleBoxFlat
+		{
+			BgColor = new Color("#FFFFFF"),
+			CornerRadiusBottomLeft = 1,
+			CornerRadiusBottomRight = 1,
+			CornerRadiusTopLeft = 1,
+			CornerRadiusTopRight = 1
+		});
+		column.AddChild(_timerBar);
 	}
 
-	private static StyleBoxFlat MakeStyle(Color bg, Color border, int borderWidth)
+	private static StyleBoxFlat MakeGlowStyle(Color bg, Color border, Color glow)
 	{
 		return new StyleBoxFlat
 		{
 			BgColor = bg,
 			BorderColor = border,
-			BorderWidthBottom = borderWidth,
-			BorderWidthLeft = borderWidth,
-			BorderWidthRight = borderWidth,
-			BorderWidthTop = borderWidth,
-			CornerRadiusBottomLeft = 12,
-			CornerRadiusBottomRight = 12,
-			CornerRadiusTopLeft = 12,
-			CornerRadiusTopRight = 12
+			BorderWidthBottom = 2,
+			BorderWidthLeft = 2,
+			BorderWidthRight = 2,
+			BorderWidthTop = 2,
+			CornerRadiusBottomLeft = 10,
+			CornerRadiusBottomRight = 10,
+			CornerRadiusTopLeft = 10,
+			CornerRadiusTopRight = 10,
+			ShadowColor = glow,
+			ShadowSize = glow.A > 0.01f ? 10 : 0,
+			ShadowOffset = new Vector2(0, 0)
 		};
 	}
 
@@ -122,6 +167,8 @@ public partial class EventDialog : CanvasLayer
 		_onChoice = onChoice;
 		_resolving = false;
 		_chosenIndex = -1;
+		_elapsed = 0.0;
+		_timerBar.Value = ChoiceTimeout;
 
 		_title.Text = data.Title;
 		_desc.Text = data.Description;
@@ -129,12 +176,16 @@ public partial class EventDialog : CanvasLayer
 		for (int i = 0; i < 3; i++)
 		{
 			string key = i == 0 ? "J" : i == 1 ? "K" : "L";
-			string prefix = i == 0 ? "A" : i == 1 ? "B" : "C";
-			_optionLabels[i].Text = $"[{key}] {prefix}：{data.Options[i].Label}";
-			_optionPanels[i].Show();
-			_optionPanels[i].Modulate = Colors.White;
-			_optionStyles[i].BgColor = _idleOptionBg;
-			_optionStyles[i].BorderColor = _idleOptionBorder;
+			_optionButtons[i].Text = $"{key}  {data.Options[i].Label}";
+			_optionButtons[i].MouseFilter = Control.MouseFilterEnum.Stop;
+			_optionButtons[i].FocusMode = Control.FocusModeEnum.All;
+			_optionButtons[i].Show();
+			_optionButtons[i].SelfModulate = Colors.White;
+
+			_optionStyles[i].BgColor = _idleBg;
+			_optionStyles[i].BorderColor = _idleBorder;
+			_optionStyles[i].ShadowColor = new Color("#000000", 0f);
+			_optionStyles[i].ShadowSize = 0;
 		}
 	}
 
@@ -149,24 +200,24 @@ public partial class EventDialog : CanvasLayer
 
 	private void Choose(int index)
 	{
+		if (_resolving) return;
 		_resolving = true;
 		_chosenIndex = index;
 		_flashT = 0.0;
 
-		// 把另外两项变成灰色并压低透明度,让玩家只看选中项
+		// 全部设为对应颜色(正确绿/错误红),然后只让选中项闪烁
 		for (int i = 0; i < 3; i++)
 		{
-			if (i == index)
-			{
-				bool correct = _data.Options[i].IsCorrect;
-				_optionStyles[i].BgColor = correct ? _correctColor : _wrongColor;
-				_optionStyles[i].BorderColor = Colors.White;
-				_optionLabels[i].AddThemeColorOverride("font_color", new Color("#1A0F2E"));
-			}
-			else
-			{
-				_optionPanels[i].Modulate = new Color(0.3f, 0.3f, 0.3f, 0.35f);
-			}
+			_optionButtons[i].MouseFilter = Control.MouseFilterEnum.Ignore;
+			_optionButtons[i].FocusMode = Control.FocusModeEnum.None;
+			bool correct = _data.Options[i].IsCorrect;
+			_optionStyles[i].BgColor = correct ? new Color("#0B3D1F") : new Color("#4A0F1A");
+			_optionStyles[i].BorderColor = correct ? _correctBorder : _wrongBorder;
+			_optionStyles[i].ShadowColor = correct ? _correctGlow : _wrongGlow;
+			_optionStyles[i].ShadowSize = correct ? 12 : 10;
+
+			if (i != index)
+				_optionButtons[i].SelfModulate = new Color(0.35f, 0.35f, 0.35f);
 		}
 
 		_onChoice?.Invoke(index);
@@ -174,30 +225,30 @@ public partial class EventDialog : CanvasLayer
 
 	public override void _Process(double delta)
 	{
-		if (!_resolving || _chosenIndex < 0) return;
-
-		_flashT += delta;
-		double half = FlashDuration * 0.5;
-		float alpha;
-		if (_flashT < half)
+		if (_resolving)
 		{
-			// 前半段渐亮
-			alpha = Mathf.Clamp((float)(_flashT / half), 0f, 1f);
+			_flashT += delta;
+			double half = FlashDuration * 0.5;
+			float t;
+			if (_flashT < half)
+				t = Mathf.Clamp((float)(_flashT / half), 0f, 1f);
+			else
+				t = Mathf.Clamp(1f - (float)((_flashT - half) / half), 0f, 1f);
+
+			// 选中项 SelfModulate 做亮度脉冲:1.0 -> 1.5 -> 1.0,不透明度不变
+			float bright = 1f + t * 0.55f;
+			var chosen = _optionButtons[_chosenIndex];
+			chosen.SelfModulate = new Color(bright, bright, bright);
+
+			if (_flashT >= FlashDuration)
+				QueueFree();
 		}
 		else
 		{
-			// 后半段渐隐消失
-			alpha = Mathf.Clamp(1f - (float)((_flashT - half) / half), 0f, 1f);
+			_elapsed += delta;
+			_timerBar.Value = Mathf.Max(ChoiceTimeout - _elapsed, 0.0);
+			if (_elapsed >= ChoiceTimeout)
+				Choose(0);
 		}
-
-		var chosen = _optionPanels[_chosenIndex];
-		chosen.Modulate = new Color(
-			Mathf.Min(1f, chosen.Modulate.R + 0.5f),
-			Mathf.Min(1f, chosen.Modulate.G + 0.5f),
-			Mathf.Min(1f, chosen.Modulate.B + 0.5f),
-			alpha);
-
-		if (_flashT >= FlashDuration)
-			QueueFree();
 	}
 }
