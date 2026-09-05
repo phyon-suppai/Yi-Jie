@@ -62,10 +62,8 @@ public partial class AudioManager : AudioStreamPlayer
 		_sfxHeart = AddSfx("Heart", "res://assets/sfx/heart_thump.wav");
 		_sfxHeart.VolumeDb = -14f; // 心跳小声一点
 
-		_sfxLevelStart = AddSfx("LevelStart", "res://assets/sfx/level_start.wav");
-		// 如果没有准备专门的关卡进入音效，先用拾取音代替
-		if (_sfxLevelStart.Stream == null)
-			_sfxLevelStart.Stream = GD.Load<AudioStream>("res://assets/sfx/pickup.wav");
+		// 没有专门的关卡进入音效,直接复用拾取音,避免加载不存在的 level_start.wav 触发报错
+		_sfxLevelStart = AddSfx("LevelStart", "res://assets/sfx/pickup.wav");
 	}
 
 	private AudioStreamPlayer AddSfx(string nodeName, string path)
