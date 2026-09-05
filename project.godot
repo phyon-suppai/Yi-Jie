@@ -22,7 +22,7 @@ window/stretch/aspect="expand"
 
 [dotnet]
 
-project/assembly_name="溢界"
+project/assembly_name="YiJie"
 
 [input]
 

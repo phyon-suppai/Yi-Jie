@@ -1,6 +1,6 @@
 ﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "溢界", "溢界.csproj", "{7EB7D8EA-4E7E-421C-B00D-9C6DEBFEDFDE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YiJie", "YiJie.csproj", "{7EB7D8EA-4E7E-421C-B00D-9C6DEBFEDFDE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
