@@ -264,7 +264,9 @@ public partial class GameManager : Node
 		EventOpen = true;
 		_eventDialog = new EventDialog();
 		AddChild(_eventDialog);
-		_eventDialog.ShowEvent(_currentEventData, OnEventChoice);
+		// 传入"关闭回调":仅当弹窗真正消失(闪烁播放完毕)时才复位 EventOpen,
+		// 避免此前用固定 2.5s 定时器导致弹窗已关、角色却仍被禁止读 J/K/L 的问题。
+		_eventDialog.ShowEvent(_currentEventData, OnEventChoice, OnEventDialogClosed);
 	}
 
 	private void OnEventChoice(int index)
@@ -278,13 +280,13 @@ public partial class GameManager : Node
 
 		if (opt.IsCorrect) PlayEventCorrect();
 		else PlayEventPenalty();
+	}
 
-		GetTree().CreateTimer(2.5).Timeout += () =>
-		{
-			EventOpen = false;
-			_currentEventData = null;
-			_eventDialog = null;
-		};
+	private void OnEventDialogClosed()
+	{
+		EventOpen = false;
+		_currentEventData = null;
+		_eventDialog = null;
 	}
 
 	private void SpawnPenaltyWorries(int count)

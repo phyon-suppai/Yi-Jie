@@ -11,6 +11,7 @@ public partial class EventDialog : CanvasLayer
 {
 	private SpecialEventData _data;
 	private Action<int> _onChoice;
+	private Action _onClosed;
 
 	private Label _title;
 	private Label _desc;
@@ -161,10 +162,11 @@ public partial class EventDialog : CanvasLayer
 		};
 	}
 
-	public void ShowEvent(SpecialEventData data, Action<int> onChoice)
+	public void ShowEvent(SpecialEventData data, Action<int> onChoice, Action onClosed)
 	{
 		_data = data;
 		_onChoice = onChoice;
+		_onClosed = onClosed;
 		_resolving = false;
 		_chosenIndex = -1;
 		_elapsed = 0.0;
@@ -241,7 +243,10 @@ public partial class EventDialog : CanvasLayer
 			chosen.SelfModulate = new Color(bright, bright, bright);
 
 			if (_flashT >= FlashDuration)
+			{
+				_onClosed?.Invoke();
 				QueueFree();
+			}
 		}
 		else
 		{
