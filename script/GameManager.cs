@@ -45,6 +45,7 @@ public partial class GameManager : Node
 	private Ground _ground;
 	private VisionOverlay _overlay;
 	private Hud _hud;
+	private AudioManager _audio;
 	private readonly RandomNumberGenerator _rng = new();
 
 	private bool _finished;                 // 是否已进入结算态(胜/负)
@@ -73,8 +74,14 @@ public partial class GameManager : Node
 		_overlay = new VisionOverlay();
 		AddChild(_overlay);
 
+		_audio = new AudioManager();
+		AddChild(_audio);
+		CallDeferred(nameof(PlayLevelStartSound));
+
 		CallDeferred(nameof(CollectSpawnersAndPortal));
 	}
+
+	private void PlayLevelStartSound() => _audio?.PlayLevelStart();
 
 	private void CollectSpawnersAndPortal()
 	{
@@ -171,12 +178,21 @@ public partial class GameManager : Node
 
 	[Export] public string NextLevelPath { get; set; } = ""; // 胜利后进入的下一关路径
 
+	public void PlayShoot() => _audio?.PlayShoot();
+	public void PlayDissolve() => _audio?.PlayDissolve();
+	public void PlayWrongHit() => _audio?.PlayHit();
+	public void PlayHurt() => _audio?.PlayHurt();
+	public void PlayEventCorrect() => _audio?.PlayEventCorrect();
+	public void PlayEventPenalty() => _audio?.PlayEventPenalty();
+
 	private void Finish(string msg)
 	{
 		_finished = true;
 		GD.Print(msg);
 
 		bool victory = EnergySystem.Achieve >= EnergySystem.MaxAchieve;
+		if (victory) _audio?.PlayWin();
+		else _audio?.PlayLose();
 
 		GetTree().CreateTimer(0.6).Timeout += () =>
 		{
@@ -222,6 +238,9 @@ public partial class GameManager : Node
 		EnergySystem.AddEnergy(opt.EnergyDelta);
 		if (opt.SpawnPressureCount > 0)
 			SpawnPenaltyWorries(opt.SpawnPressureCount);
+
+		if (opt.IsCorrect) PlayEventCorrect();
+		else PlayEventPenalty();
 
 		GetTree().CreateTimer(2.5).Timeout += () =>
 		{
@@ -356,6 +375,7 @@ public partial class GameManager : Node
 			// 误伤:用错颜色的武器命中没有伤害,但扣精力并触发视觉警告
 			EnergySystem.ApplyWrongHit();
 			target.OnWrongHit();
+			PlayWrongHit();
 			GD.Print($"误伤 {target.Kind} (用 {weaponType}) → 精力 -{ReactionTable.WrongColorEnergyPenalty:F0}");
 			return;
 		}
@@ -364,8 +384,9 @@ public partial class GameManager : Node
 		if (dead)
 		{
 			EnergySystem.ApplyDissolve(); // 成就 +N
-					RemoveWorry(target);          // 立即移出计数,消散动画期间不再算作场上烦恼
-					GD.Print($"消散 {target.Kind} → 成就+{ReactionTable.DissolveAchieveBonus:F0} (当前 {EnergySystem.Achieve:F0}/{EnergySystem.MaxAchieve:F0})");
+			PlayDissolve();
+			RemoveWorry(target);          // 立即移出计数,消散动画期间不再算作场上烦恼
+			GD.Print($"消散 {target.Kind} → 成就+{ReactionTable.DissolveAchieveBonus:F0} (当前 {EnergySystem.Achieve:F0}/{EnergySystem.MaxAchieve:F0})");
 		}
 	}
 

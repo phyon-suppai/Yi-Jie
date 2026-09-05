@@ -145,6 +145,7 @@ public partial class Character : CharacterBody2D
 		_heldWeapon[slot] = weapon;
 		_cdLeft[slot] = weapon.Cooldown;
 		_cdFull[slot] = Mathf.Max(_cdLeft[slot], 0.001f);
+		_gm?.PlayShoot();
 	}
 
 	/// <summary>软锁定:±30° 锥内修正(仅改变方向,不把玩家拖去没指的目标)。</summary>
