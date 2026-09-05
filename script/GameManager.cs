@@ -374,10 +374,13 @@ public partial class GameManager : Node
 	{
 		if (_overlay == null || _hud == null) return;
 
-		// 视线:精力越低,四周压暗(旧版无状态矩阵,仅随精力)
+		// 视线:精力低于60%开始压暗,30%达到最暗,并以玩家为中心做椭圆透亮区
 		float frac = EnergySystem.Energy / EnergySystem.MaxEnergy;
-		float darkness = Mathf.Clamp((1f - frac) * 0.55f, 0f, 0.85f);
-		_overlay.Refresh(1f, darkness);
+		Vector2 vp = GetViewport().GetVisibleRect().Size;
+		Vector2 playerScreen = _player != null
+			? _player.GetGlobalTransformWithCanvas().Origin
+			: vp * 0.5f;
+		_overlay.Refresh(frac, playerScreen, vp);
 
 		_hud.Refresh(
 			frac,
