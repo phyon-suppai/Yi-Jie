@@ -52,6 +52,7 @@ public partial class GameManager : Node
 	public bool EventOpen { get; private set; } // 特殊事件弹窗是否打开
 	private EventDialog _eventDialog;
 	private SpecialEventData _currentEventData;
+	private bool _pauseOpen;                // 暂停菜单是否打开
 
 	public override void _Ready()
 	{
@@ -102,6 +103,12 @@ public partial class GameManager : Node
 
 	public override void _Process(double delta)
 	{
+		if (Input.IsActionJustPressed("ui_cancel") && !_pauseOpen)
+		{
+			OpenPauseMenu();
+			return;
+		}
+
 		float d = (float)delta;
 
 		if (!_finished)
@@ -115,6 +122,26 @@ public partial class GameManager : Node
 		}
 
 		ClampEntities(); // 结算期间也把实体限制在纸面内
+	}
+
+	private void OpenPauseMenu()
+	{
+		if (_pauseOpen || _finished) return;
+		_pauseOpen = true;
+		GetTree().Paused = true;
+
+		var pause = GD.Load<PackedScene>("res://scenes/ui/pause_overlay.tscn");
+		if (pause != null)
+		{
+			var overlay = pause.Instantiate<PauseOverlay>();
+			overlay.TreeExited += () => _pauseOpen = false;
+			GetTree().CurrentScene.AddChild(overlay);
+		}
+		else
+		{
+			_pauseOpen = false;
+			GetTree().Paused = false;
+		}
 	}
 
 	/// <summary>统计正在「缠身」玩家的烦恼数量(距离足够近才计入,太远只算普通压力不大量掉精力)。</summary>

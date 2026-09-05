@@ -8,6 +8,9 @@ public partial class TitleScreen : Control
     {
         _startButton = GetNode<Button>("Root/StartButton");
         _startButton.Pressed += ShowIntro;
+
+        var quitButton = GetNode<Button>("Root/QuitButton");
+        quitButton.Pressed += () => GetTree().Quit();
     }
 
     public override void _Input(InputEvent @event)
