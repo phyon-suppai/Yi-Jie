@@ -1,6 +1,6 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene format=3 uid="uid://bbr1oxv8pj165"]
 
-[ext_resource type="Script" path="res://script/ui/IntroOverlay.cs" id="1_intro"]
+[ext_resource type="Script" uid="uid://bjnw0abdqdir8" path="res://script/ui/IntroOverlay.cs" id="1_intro"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
 bg_color = Color(0.05, 0.06, 0.09, 0.96)
@@ -47,11 +47,11 @@ corner_radius_top_right = 4
 corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
 
-[node name="IntroOverlay" type="CanvasLayer"]
+[node name="IntroOverlay" type="CanvasLayer" unique_id=667014797]
 process_mode = 3
 script = ExtResource("1_intro")
 
-[node name="Dim" type="ColorRect" parent="."]
+[node name="Dim" type="ColorRect" parent="." unique_id=2087886035]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -60,19 +60,19 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(0, 0, 0, 0.72)
 
-[node name="Center" type="CenterContainer" parent="."]
+[node name="Center" type="CenterContainer" parent="." unique_id=1455573495]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Panel" type="Panel" parent="Center"]
+[node name="Panel" type="Panel" parent="Center" unique_id=151333932]
+custom_minimum_size = Vector2(820, 540)
 layout_mode = 2
-custom_minimum_size = Vector2(820, 520)
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
-[node name="Margin" type="MarginContainer" parent="Center/Panel"]
+[node name="Margin" type="MarginContainer" parent="Center/Panel" unique_id=874959417]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -84,29 +84,31 @@ offset_bottom = -28.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="VBox" type="VBoxContainer" parent="Center/Panel/Margin"]
+[node name="VBox" type="VBoxContainer" parent="Center/Panel/Margin" unique_id=341797842]
 layout_mode = 2
 theme_override_constants/separation = 16
 
-[node name="TitleLabel" type="Label" parent="Center/Panel/Margin/VBox"]
+[node name="TitleLabel" type="Label" parent="Center/Panel/Margin/VBox" unique_id=1962274550]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.95, 0.97, 1)
 theme_override_font_sizes/font_size = 30
 text = "世界规则"
 horizontal_alignment = 1
 
-[node name="StoryLabel" type="Label" parent="Center/Panel/Margin/VBox"]
+[node name="StoryLabel" type="Label" parent="Center/Panel/Margin/VBox" unique_id=2072135925]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
 theme_override_font_sizes/font_size = 17
-text = "这是一场与内心情绪的对话。不同时期有不同的烦恼——怀疑、焦虑、孤独。我们需要在正确的时间里，用正确的方式面对它们。"
+text = "这是一场与内心情绪的对话。
+不同时期有不同的烦恼——怀疑、焦虑、孤独。
+我们需要在正确的时间里，用正确的方式面对它们。"
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="Rule" type="HSeparator" parent="Center/Panel/Margin/VBox"]
+[node name="Rule" type="HSeparator" parent="Center/Panel/Margin/VBox" unique_id=1993384966]
 layout_mode = 2
 
-[node name="MechanicLabel" type="Label" parent="Center/Panel/Margin/VBox"]
+[node name="MechanicLabel" type="Label" parent="Center/Panel/Margin/VBox" unique_id=532374136]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9, 0.9, 0.94, 1)
 theme_override_font_sizes/font_size = 17
@@ -122,11 +124,11 @@ text = "💜 精力：会随时间流失，被烦恼缠身时掉得更快；击�
 🚪 通关 —— 在当前阶段积累足够的成就值，即可进入下一时期。"
 autowrap_mode = 2
 
-[node name="Spacer" type="Control" parent="Center/Panel/Margin/VBox"]
+[node name="Spacer" type="Control" parent="Center/Panel/Margin/VBox" unique_id=1519114467]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="StartButton" type="Button" parent="Center/Panel/Margin/VBox"]
+[node name="StartButton" type="Button" parent="Center/Panel/Margin/VBox" unique_id=301658718]
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_colors/font_color = Color(1, 1, 1, 1)
