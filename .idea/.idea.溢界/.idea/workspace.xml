@@ -3,13 +3,8 @@
   <component name="ChangeListManager">
     <list default="true" id="ad5c980a-5606-47d7-b4d1-dc24efb1867f" name="更改" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.溢界/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.溢界/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/game_manager.tscn" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/object/accept_weapon.tscn" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/object/act_weapon.tscn" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/object/book1.tscn" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/object/express_weapon.tscn" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/object/heart.tscn" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/object/portal.tscn" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/export_presets.cfg" beforeDir="false" afterPath="$PROJECT_DIR$/export_presets.cfg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scenes/theme/youth.tscn" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -64,7 +59,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1788632426469</updated>
-      <workItem from="1788632427241" duration="3540000" />
+      <workItem from="1788632427241" duration="4547000" />
     </task>
     <task id="LOCAL-00001" summary="文件名由汉字改成汉语拼音">
       <option name="closed" value="true" />
@@ -90,7 +85,15 @@
       <option name="project" value="LOCAL" />
       <updated>1788672398674</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="清除第一版残留">
+      <option name="closed" value="true" />
+      <created>1788672799150</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1788672799150</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -114,7 +117,8 @@
     <MESSAGE value="文件名由汉字改成汉语拼音" />
     <MESSAGE value="选项位置随机化" />
     <MESSAGE value="增加换行避免超出框" />
-    <option name="LAST_COMMIT_MESSAGE" value="增加换行避免超出框" />
+    <MESSAGE value="清除第一版残留" />
+    <option name="LAST_COMMIT_MESSAGE" value="清除第一版残留" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
