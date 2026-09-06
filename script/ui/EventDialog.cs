@@ -23,6 +23,10 @@ public partial class EventDialog : CanvasLayer
 	private int _chosenIndex = -1;
 	private double _flashT;
 	private double _elapsed;
+
+	/// <summary>显示槽 i 实际指向 Options 的原始下标(每次 ShowEvent 洗牌一次,实现 J/K/L 选项随机排列)。</summary>
+	private readonly int[] _displayMap = new int[3];
+	private static readonly System.Random _rng = new();
 	private const double FlashDuration = 0.55;
 	private const double ChoiceTimeout = 6.0; // 超时自动选 A(J)
 
@@ -175,10 +179,19 @@ public partial class EventDialog : CanvasLayer
 		_title.Text = data.Title;
 		_desc.Text = data.Description;
 
+		// 洗牌显示顺序:每个问题出现时,J/K/L 对应的选项都重新随机排列
+		for (int i = 0; i < 3; i++) _displayMap[i] = i;
+		for (int i = 2; i > 0; i--)
+		{
+			int j = _rng.Next(i + 1);
+			(_displayMap[i], _displayMap[j]) = (_displayMap[j], _displayMap[i]);
+		}
+
 		for (int i = 0; i < 3; i++)
 		{
 			string key = i == 0 ? "J" : i == 1 ? "K" : "L";
-			_optionButtons[i].Text = $"{key}  {data.Options[i].Label}";
+			int src = _displayMap[i];
+			_optionButtons[i].Text = $"{key}  {data.Options[src].Label}";
 			_optionButtons[i].MouseFilter = Control.MouseFilterEnum.Stop;
 			_optionButtons[i].FocusMode = Control.FocusModeEnum.All;
 			_optionButtons[i].Show();
@@ -212,7 +225,8 @@ public partial class EventDialog : CanvasLayer
 		{
 			_optionButtons[i].MouseFilter = Control.MouseFilterEnum.Ignore;
 			_optionButtons[i].FocusMode = Control.FocusModeEnum.None;
-			bool correct = _data.Options[i].IsCorrect;
+			int src = _displayMap[i];
+			bool correct = _data.Options[src].IsCorrect;
 			_optionStyles[i].BgColor = correct ? new Color("#0B3D1F") : new Color("#4A0F1A");
 			_optionStyles[i].BorderColor = correct ? _correctBorder : _wrongBorder;
 			_optionStyles[i].ShadowColor = correct ? _correctGlow : _wrongGlow;
@@ -222,7 +236,8 @@ public partial class EventDialog : CanvasLayer
 				_optionButtons[i].SelfModulate = new Color(0.35f, 0.35f, 0.35f);
 		}
 
-		_onChoice?.Invoke(index);
+		// 回调始终传原始下标,保证 GameManager 取到的选项与玩家所见一致
+		_onChoice?.Invoke(_displayMap[index]);
 	}
 
 	public override void _Process(double delta)
